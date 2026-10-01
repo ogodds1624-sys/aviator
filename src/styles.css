@@ -111,6 +111,10 @@
     grid-template-columns: minmax(12rem, 1.4fr) 5.5rem 7.5rem 9rem;
     row-gap: 0;
   }
+  .desk-shell .partner-row.desk-row {
+    grid-template-columns: minmax(8rem, 1.15fr) 6rem 7rem minmax(11rem, 1.3fr) 10.5rem 9.25rem 8rem 8rem;
+    row-gap: 0;
+  }
   .desk-shell .week-row.desk-row {
     grid-template-columns: 2fr 1fr;
     row-gap: 0;

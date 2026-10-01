@@ -742,6 +742,8 @@ function PartnerDesk({
           <h2 className="text-lg font-black">Partners</h2>
           <p className="mt-1 text-sm text-[#8b95a7]">Members who open /?ref=CODE are credited to this partner in Ghana and Nigeria.</p>
         </div>
+        <div className="overflow-x-auto">
+          <div className="min-w-[68rem]">
         <div className={partnerCols + " desk-head text-[11px] tracking-[0.12em]"}>
           <span>PARTNER</span>
           <span>STATUS</span>
@@ -800,6 +802,8 @@ function PartnerDesk({
             );
           })
         )}
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -857,7 +861,7 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
 }
 
 const partnerCols =
-  "desk-row grid-cols-[minmax(8rem,1.15fr)_6rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
+  "partner-row desk-row grid-cols-[minmax(8rem,1.15fr)_6rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
 
 function TransactionHistory({
   payments,

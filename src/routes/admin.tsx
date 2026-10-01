@@ -124,6 +124,13 @@ const EMPTY_SNAPSHOT: AdminSnapshot = {
 };
 
 const memberCols = "desk-row grid-cols-[minmax(0,1.4fr)_5.5rem_7.5rem_9rem]";
+const phoneMemberCols = "grid grid-cols-[5.75rem_5.5rem_minmax(0,1fr)] items-center gap-x-2 px-3";
+
+function memberDate(value: string) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
+}
 const txCols = "desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_8.5rem_7.5rem]";
 
 function AdminPage() {
@@ -1006,39 +1013,59 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
           className="mt-4 h-12 w-full rounded-xl border border-white/15 bg-ink px-3 text-sm outline-none"
         />
       </div>
-      <div className={memberCols + " desk-head text-[11px] tracking-[0.14em]"}>
-        <span>MEMBER</span>
-        <span className="text-center">JOINED</span>
-        <span className="text-center">STATUS</span>
-        <span className="text-center">REFERRED BY</span>
-      </div>
       {shown.length === 0 ? (
         <p className="px-4 py-5 text-sm text-[#6b7280]">{members.length === 0 ? "No accounts yet." : "No members match that search."}</p>
       ) : (
-        shown.map((member) => {
-          const date = member.createdAt ? new Date(member.createdAt) : null;
-          return (
-            <article key={member.id} className={memberCols}>
-              <div className="min-w-0">
-                <p className="truncate font-extrabold">{member.name}</p>
-                <p className="truncate text-sm text-[#6b7280]">{member.email}</p>
+        <>
+          <div className="md:hidden">
+            <div className={phoneMemberCols + " border-t border-[#333] bg-white/[0.03] py-2.5 text-[10px] font-extrabold tracking-[0.12em] text-[#9aa3b2]"}>
+              <span>DATE</span>
+              <span className="text-center">STATUS</span>
+              <span>REFERRAL NAME</span>
+            </div>
+            {shown.map((member) => (
+              <div key={member.id} className={phoneMemberCols + " min-h-12 border-t border-[#333] py-2.5 text-xs"}>
+                <span className="tabular-nums font-semibold text-[#c5cad3]">{memberDate(member.createdAt)}</span>
+                <span className="justify-self-center">
+                  <span className={member.paid ? "pill-active" : "pill-unpaid"}>{member.paid ? "ACTIVE" : "UNPAID"}</span>
+                </span>
+                <span className="truncate font-bold">{member.name}</span>
               </div>
-              <div className="text-center text-xs leading-4 text-[#6b7280]">
-                <p>{date ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</p>
-                <p>{date ? `${date.getFullYear()} ·` : ""}</p>
-                <p>{date ? date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
-              </div>
-              {member.paid ? <span className="pill-active justify-self-center">ACTIVE</span> : <span className="pill-unpaid justify-self-center">UNPAID</span>}
-              <div className="flex justify-center">
-                {member.referredBy ? (
-                  <span className="max-w-full truncate rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-bold">{member.referredBy}</span>
-                ) : (
-                  <span className="text-xs text-[#9aa3b2]">—</span>
-                )}
-              </div>
-            </article>
-          );
-        })
+            ))}
+          </div>
+          <div className="hidden md:block">
+            <div className={memberCols + " desk-head text-[11px] tracking-[0.14em]"}>
+              <span>MEMBER</span>
+              <span className="text-center">JOINED</span>
+              <span className="text-center">STATUS</span>
+              <span className="text-center">REFERRED BY</span>
+            </div>
+            {shown.map((member) => {
+              const date = member.createdAt ? new Date(member.createdAt) : null;
+              return (
+                <article key={member.id} className={memberCols}>
+                  <div className="min-w-0">
+                    <p className="truncate font-extrabold">{member.name}</p>
+                    <p className="truncate text-sm text-[#6b7280]">{member.email}</p>
+                  </div>
+                  <div className="text-center text-xs leading-4 text-[#6b7280]">
+                    <p>{date ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—"}</p>
+                    <p>{date ? `${date.getFullYear()} ·` : ""}</p>
+                    <p>{date ? date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                  </div>
+                  {member.paid ? <span className="pill-active justify-self-center">ACTIVE</span> : <span className="pill-unpaid justify-self-center">UNPAID</span>}
+                  <div className="flex justify-center">
+                    {member.referredBy ? (
+                      <span className="max-w-full truncate rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-bold">{member.referredBy}</span>
+                    ) : (
+                      <span className="text-xs text-[#9aa3b2]">—</span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </>
       )}
     </section>
   );

@@ -131,7 +131,7 @@ function memberDate(value: string) {
   if (!date || Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 }
-const txCols = "desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_8.5rem_7.5rem]";
+const txCols = "tx-row desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_8.5rem_7.5rem]";
 
 function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -904,6 +904,8 @@ function TransactionHistory({
           {payments.length} · {pending} pending
         </span>
       </div>
+      <div className="overflow-x-auto">
+      <div className="min-w-[52rem]">
       <div className={txCols + " desk-head text-[11px] tracking-[0.14em]"}>
         <span>DATE</span>
         <span>MEMBER</span>
@@ -970,6 +972,8 @@ function TransactionHistory({
           );
         })
       )}
+      </div>
+      </div>
       {proof ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 px-4" role="dialog">
           <div className="max-h-[90dvh] w-full max-w-md overflow-auto rounded-[28px] border border-line bg-panel">

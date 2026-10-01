@@ -99,6 +99,10 @@
     grid-template-columns: 1fr;
     row-gap: 0.35rem;
   }
+  .desk-shell .tx-row.desk-row {
+    grid-template-columns: 6.5rem minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.9fr) 8.5rem 7.5rem;
+    row-gap: 0;
+  }
 }
 
 @media (min-width: 768px) {

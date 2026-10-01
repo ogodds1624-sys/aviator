@@ -75,6 +75,16 @@ function NigeriaFlag() {
   );
 }
 
+function rateFields(gateway: GatewaySettings) {
+  return {
+    nigeria: gateway.nigeria ? String(gateway.nigeria) : "",
+    kenya: gateway.kenya ? String(gateway.kenya) : "",
+    tanzania: gateway.tanzania ? String(gateway.tanzania) : "",
+    zambia: gateway.zambia ? String(gateway.zambia) : "",
+    southAfrica: gateway.southAfrica ? String(gateway.southAfrica) : "",
+  };
+}
+
 const EMPTY_CHECKOUT: GatewayCheckout = {
   currency: "GHS",
   businessName: "Aviator Hack",
@@ -422,14 +432,24 @@ function PaymentGateway({
   onChange: (snapshot: AdminSnapshot) => void;
   onBusy: (busy: boolean) => void;
 }) {
-  const [rates, setRates] = useState({
-    nigeria: gateway.nigeria ? String(gateway.nigeria) : "",
-    kenya: gateway.kenya ? String(gateway.kenya) : "",
-    tanzania: gateway.tanzania ? String(gateway.tanzania) : "",
-    zambia: gateway.zambia ? String(gateway.zambia) : "",
-    southAfrica: gateway.southAfrica ? String(gateway.southAfrica) : "",
-  });
+  const [rates, setRates] = useState(() => rateFields(gateway));
   const [error, setError] = useState<string | null>(null);
+  const ratesDirty = useRef(false);
+  const ratesApplied = useRef("");
+  const rateKey = JSON.stringify([
+    gateway.nigeria,
+    gateway.kenya,
+    gateway.tanzania,
+    gateway.zambia,
+    gateway.southAfrica,
+  ]);
+
+  useEffect(() => {
+    if (ratesApplied.current === rateKey || ratesDirty.current) return;
+    ratesApplied.current = rateKey;
+    setRates(rateFields(gateway));
+  }, [rateKey, gateway]);
+
   const fields = [
     ["nigeria", "NIGERIA — ₦ PER GHS"],
     ["kenya", "KENYA — KSH PER GHS"],
@@ -437,6 +457,11 @@ function PaymentGateway({
     ["zambia", "ZAMBIA — ZK PER GHS"],
     ["southAfrica", "SOUTH AFRICA — R PER GHS"],
   ] as const;
+
+  function editRate(key: (typeof fields)[number][0], value: string) {
+    ratesDirty.current = true;
+    setRates((current) => ({ ...current, [key]: value }));
+  }
 
   return (
     <div className="mt-6 space-y-4">
@@ -458,6 +483,7 @@ function PaymentGateway({
               },
             })
               .then((next) => {
+                ratesDirty.current = false;
                 bumpGateway();
                 onChange(next);
               })
@@ -472,14 +498,14 @@ function PaymentGateway({
                 <span className="mt-1 flex items-center gap-2">
                   <input
                     value={rates[key]}
-                    onChange={(event) => setRates((current) => ({ ...current, [key]: event.target.value }))}
+                    onChange={(event) => editRate(key, event.target.value)}
                     inputMode="decimal"
                     className="h-11 min-w-0 flex-1 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none"
                   />
                   <button
                     type="button"
                     aria-label={`Reset ${label}`}
-                    onClick={() => setRates((current) => ({ ...current, [key]: "" }))}
+                    onClick={() => editRate(key, "")}
                     className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 text-[#9aa3b2]"
                   >
                     <RotateCcw className="size-3.5" aria-hidden />
@@ -512,13 +538,27 @@ function CheckoutSettings({
 }) {
   const [form, setForm] = useState<GatewayCheckout>(gateway.checkout);
   const [error, setError] = useState<string | null>(null);
+  const dirty = useRef(false);
+  const applied = useRef("");
+  const checkoutKey = JSON.stringify(gateway.checkout);
+  const checkoutRef = useRef(gateway.checkout);
+  checkoutRef.current = gateway.checkout;
 
   useEffect(() => {
-    setForm(gateway.checkout);
-  }, [gateway.checkout]);
+    // The desk reloads the snapshot every few seconds. Copy it in only when
+    // the saved checkout actually changed and the admin is not mid-edit.
+    if (applied.current === checkoutKey || dirty.current) return;
+    applied.current = checkoutKey;
+    setForm(checkoutRef.current);
+  }, [checkoutKey]);
+
+  function update(recipe: (current: GatewayCheckout) => GatewayCheckout) {
+    dirty.current = true;
+    setForm((current) => recipe(current));
+  }
 
   function patchList<T>(key: "wallets" | "banks" | "nigeriaBanks", index: number, patch: Partial<T>) {
-    setForm((current) => ({
+    update((current) => ({
       ...current,
       [key]: current[key].map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
     }));
@@ -535,6 +575,7 @@ function CheckoutSettings({
           onBusy(true);
           void saveGatewayCheckout({ data: form })
             .then((next) => {
+              dirty.current = false;
               bumpGateway();
               onChange(next);
             })
@@ -544,17 +585,17 @@ function CheckoutSettings({
       >
         <label className="block">
           <span className="text-[11px] font-bold tracking-[0.14em] text-[#9aa3b2]">BUSINESS / DISPLAY NAME</span>
-          <input value={form.businessName} onChange={(event) => setForm((current) => ({ ...current, businessName: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+          <input value={form.businessName} onChange={(event) => update((current) => ({ ...current, businessName: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
         </label>
         <label className="block">
           <span className="text-[11px] font-bold tracking-[0.14em] text-[#9aa3b2]">WHATSAPP SUPPORT NUMBER</span>
-          <input value={form.whatsapp} onChange={(event) => setForm((current) => ({ ...current, whatsapp: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+          <input value={form.whatsapp} onChange={(event) => update((current) => ({ ...current, whatsapp: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
         </label>
         <label className="block">
           <span className="text-[11px] font-bold tracking-[0.14em] text-[#9aa3b2]">SUPPORT EMAIL</span>
-          <input value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+          <input value={form.email} onChange={(event) => update((current) => ({ ...current, email: event.target.value }))} className="mt-1 h-11 w-full rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
         </label>
-        <Toggle label="Ghana MoMo" on={form.momo} onClick={() => setForm((current) => ({ ...current, momo: !current.momo }))} />
+        <Toggle label="Ghana MoMo" on={form.momo} onClick={() => update((current) => ({ ...current, momo: !current.momo }))} />
         {form.wallets.map((wallet, index) => (
           <div key={`wallet-${index}`} className="grid gap-2 md:grid-cols-3">
             <input value={wallet.network} onChange={(event) => patchList<MomoWallet>("wallets", index, { network: event.target.value })} placeholder="Network" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
@@ -562,21 +603,21 @@ function CheckoutSettings({
             <input value={wallet.name} onChange={(event) => patchList<MomoWallet>("wallets", index, { name: event.target.value })} placeholder="Name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
           </div>
         ))}
-        <button type="button" onClick={() => setForm((current) => ({ ...current, wallets: [...current.wallets, { network: "Telecel Cash (Vodafone)", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
+        <button type="button" onClick={() => update((current) => ({ ...current, wallets: [...current.wallets, { network: "Telecel Cash (Vodafone)", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
           ADD MOMO
         </button>
-        <Toggle label="Ghana bank" on={form.bank} onClick={() => setForm((current) => ({ ...current, bank: !current.bank }))} />
+        <Toggle label="Ghana bank" on={form.bank} onClick={() => update((current) => ({ ...current, bank: !current.bank }))} />
         {form.banks.map((account, index) => (
           <BankFields key={`bank-${index}`} account={account} onChange={(patch) => patchList<BankAccount>("banks", index, patch)} />
         ))}
-        <button type="button" onClick={() => setForm((current) => ({ ...current, banks: [...current.banks, { bank: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
+        <button type="button" onClick={() => update((current) => ({ ...current, banks: [...current.banks, { bank: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
           ADD BANK
         </button>
-        <Toggle label="Nigeria bank transfer" on={form.nigeriaOn} onClick={() => setForm((current) => ({ ...current, nigeriaOn: !current.nigeriaOn }))} />
+        <Toggle label="Nigeria bank transfer" on={form.nigeriaOn} onClick={() => update((current) => ({ ...current, nigeriaOn: !current.nigeriaOn }))} />
         {form.nigeriaBanks.map((account, index) => (
           <BankFields key={`ng-${index}`} account={account} onChange={(patch) => patchList<BankAccount>("nigeriaBanks", index, patch)} />
         ))}
-        <button type="button" onClick={() => setForm((current) => ({ ...current, nigeriaBanks: [...current.nigeriaBanks, { bank: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
+        <button type="button" onClick={() => update((current) => ({ ...current, nigeriaBanks: [...current.nigeriaBanks, { bank: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
           ADD NIGERIA ACCOUNT
         </button>
         {error ? <p className="text-sm text-red">{error}</p> : null}

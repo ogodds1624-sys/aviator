@@ -329,10 +329,17 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   `;
   const referralRevenue = await sql<{ referred_by: string; ghs: number | string; ngn: number | string }>`
     select lower(r.referred_by) as referred_by,
-      coalesce(sum(case when p.amount in (35000, 55000, 75000) then 0 else p.amount end), 0) as ghs,
-      coalesce(sum(case when p.amount in (35000, 55000, 75000) then p.amount else 0 end), 0) as ngn
+      coalesce(sum(case when
+        c.country = 'Nigeria'
+        or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
+        then 0 else p.amount end), 0) as ghs,
+      coalesce(sum(case when
+        c.country = 'Nigeria'
+        or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
+        then p.amount else 0 end), 0) as ngn
     from referrals r
     join payments p on p.user_id = r.user_id and p.status = 'confirmed'
+    left join player_country c on c.user_id = p.user_id
     group by lower(r.referred_by)
   `;
   const countBy = new Map(referralCounts.map((row) => [row.referred_by, Number(row.total)]));

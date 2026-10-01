@@ -753,7 +753,8 @@ function PartnerDesk({
           <span>CODE</span>
           <span>REFERRAL LINK</span>
           <span>COMMISSION</span>
-          <span className="pl-4">REVENUE</span>
+          <span className="pl-4 whitespace-nowrap">REVENUE (GHS)</span>
+          <span className="pl-3 whitespace-nowrap">REVENUE (N)</span>
           <span>ACTIONS</span>
         </div>
         {partners.length === 0 ? (
@@ -782,10 +783,8 @@ function PartnerDesk({
                   </button>
                 </div>
                 <CommissionRate value={partner.commission} disabled={busy} onSave={(commission) => void run(() => setPartnerCommission({ data: { id: partner.id, commission } }))} />
-                <span className="pl-4 text-xs font-bold leading-4">
-                  <span className="block whitespace-nowrap">GHS {partner.revenue.toLocaleString("en-GH")}</span>
-                  <span className="block whitespace-nowrap">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
-                </span>
+                <span className="pl-4 whitespace-nowrap text-xs font-bold">GHS {partner.revenue.toLocaleString("en-GH")}</span>
+                <span className="pl-3 whitespace-nowrap text-xs font-bold">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
                 <div className="flex flex-col items-start gap-1">
                   {partner.status === "pending" ? (
                     <button type="button" disabled={busy} onClick={() => void run(() => setPartnerLock({ data: { id: partner.id, locked: false } }))} className="h-7 rounded-lg bg-red px-2 text-[10px] font-extrabold text-white disabled:opacity-60">
@@ -861,7 +860,7 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
 }
 
 const partnerCols =
-  "desk-row grid-cols-[minmax(0,1.2fr)_6rem_7rem_minmax(0,1.2fr)_9.5rem_8.5rem_8rem]";
+  "desk-row grid-cols-[minmax(0,1.1fr)_6rem_7rem_minmax(0,0.9fr)_9.5rem_9.25rem_8rem_8rem]";
 
 function TransactionHistory({
   payments,

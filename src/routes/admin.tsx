@@ -17,7 +17,6 @@ import {
   saveGatewayCheckout,
   saveGatewayRates,
   setPartnerCommission,
-  setPartnerLock,
   setTestimonyStatus,
   type AdminSnapshot,
   type AdminTestimony,
@@ -784,16 +783,7 @@ function PartnerDesk({
                 </div>
                 <span className="pl-4 whitespace-nowrap text-xs font-bold">GHS {partner.revenue.toLocaleString("en-GH")}</span>
                 <span className="pl-3 whitespace-nowrap text-xs font-bold">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
-                <div className="flex flex-col items-start gap-1">
-                  {partner.status === "pending" ? (
-                    <button type="button" disabled={busy} onClick={() => void run(() => setPartnerLock({ data: { id: partner.id, locked: false } }))} className="h-7 rounded-lg bg-red px-2 text-[10px] font-extrabold text-white disabled:opacity-60">
-                      APPROVE
-                    </button>
-                  ) : (
-                    <button type="button" disabled={busy} onClick={() => void run(() => setPartnerLock({ data: { id: partner.id, locked: partner.status === "approved" } }))} className="h-7 rounded-lg border border-white/15 px-2 text-[10px] font-extrabold disabled:opacity-60">
-                      {partner.status === "approved" ? "LOCK" : "UNLOCK"}
-                    </button>
-                  )}
+                <div>
                   <button type="button" disabled={busy} onClick={() => void run(() => deletePartner({ data: { id: partner.id } }))} className="h-7 rounded-lg border border-red/80 px-2 text-[10px] font-extrabold text-red disabled:opacity-60">
                     DELETE
                   </button>

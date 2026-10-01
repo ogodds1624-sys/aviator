@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, Diamond, Hexagon, LayoutGrid, List, RefreshCw, RotateCcw, Wallet } from "lucide-react";
+import { ArrowLeftRight, Diamond, Eye, EyeOff, Hexagon, LayoutGrid, List, Lock, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import {
   addPartner,
   confirmPayment,
@@ -133,6 +133,7 @@ const txCols = "tx-row desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr
 function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [code, setCode] = useState("");
+  const [showCode, setShowCode] = useState(false);
   const [denied, setDenied] = useState(false);
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -258,22 +259,44 @@ function AdminPage() {
 
   if (!unlocked) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 text-white">
-        <form onSubmit={unlock} className="w-full max-w-xs">
-          <label htmlFor="admin-pass" className="text-xs font-extrabold tracking-[0.16em] text-white/70">
-            PASSCODE
+      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
+        <form onSubmit={unlock} className="menu-pop w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
+          <div className="mx-auto grid size-16 place-items-center rounded-full border border-red/40 bg-red/15">
+            <Lock className="size-7 text-gold" aria-hidden />
+          </div>
+          <h1 className="mt-5 text-3xl font-black tracking-tight">Admin Access</h1>
+          <p className="mt-2 text-sm font-semibold text-[#9aa3b2]">Enter your admin passcode.</p>
+          {denied ? (
+            <p className="mt-5 rounded-2xl border border-red/40 bg-red/15 px-4 py-3 text-sm font-bold text-red">Wrong passcode.</p>
+          ) : null}
+          <label htmlFor="admin-pass" className="sr-only">
+            Passcode
           </label>
-          <input
-            id="admin-pass"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            className="mt-3 h-12 w-full rounded-xl border border-line bg-panel px-3 text-center text-lg tracking-[0.3em] text-white outline-none"
-          />
-          {denied ? <p className="mt-2 text-sm text-red">Wrong passcode.</p> : null}
-          <button type="submit" className="mt-4 h-12 w-full rounded-xl bg-red text-sm font-extrabold tracking-wide text-white">
-            ENTER
+          <div className={"mt-5 flex h-14 items-center rounded-2xl border bg-ink px-4 " + (denied ? "border-red" : "border-white/15 focus-within:border-red")}>
+            <input
+              id="admin-pass"
+              value={code}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setDenied(false);
+              }}
+              type={showCode ? "text" : "password"}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Passcode"
+              className="h-full min-w-0 flex-1 bg-transparent text-left text-base tracking-[0.2em] text-white outline-none placeholder:tracking-normal placeholder:text-[#8b95a7]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCode((open) => !open)}
+              className="grid size-8 shrink-0 place-items-center text-gold"
+              aria-label={showCode ? "Hide passcode" : "Show passcode"}
+            >
+              {showCode ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+          </div>
+          <button type="submit" className="mt-5 h-14 w-full rounded-2xl bg-red text-sm font-extrabold tracking-[0.22em] text-white">
+            SIGN IN
           </button>
         </form>
       </main>

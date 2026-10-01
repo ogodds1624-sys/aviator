@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -175,47 +175,6 @@ export default defineConfig(({ command, isPreview }) => ({
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
-            hooks: {
-              // PGLite's wasm looks for pglite.data beside the bundled module
-              // (`/var/task/_libs/pglite.data`). Nitro traces the JS but not
-              // that data file, so sign-in crashes with ENOENT on Vercel.
-              compiled(built) {
-                try {
-                  const root = built.options.output?.dir;
-                  if (!root) return;
-                  const srcDir = join(process.cwd(), "node_modules/@electric-sql/pglite/dist");
-                  const asset = "pglite.data";
-                  const from = join(srcDir, asset);
-                  if (!existsSync(from)) return;
-                  const walk = (dir: string) => {
-                    let entries: string[];
-                    try {
-                      entries = readdirSync(dir);
-                    } catch {
-                      return;
-                    }
-                    for (const name of entries) {
-                      const full = join(dir, name);
-                      let isDir = false;
-                      try {
-                        isDir = statSync(full).isDirectory();
-                      } catch {
-                        continue;
-                      }
-                      if (!isDir) continue;
-                      if (name === "_libs") {
-                        const to = join(full, asset);
-                        if (!existsSync(to)) copyFileSync(from, to);
-                      }
-                      walk(full);
-                    }
-                  };
-                  walk(root);
-                } catch (err) {
-                  console.error("[pglite] failed to copy pglite.data:", err);
-                }
-              },
-            },
           }),
         ]
       : []),

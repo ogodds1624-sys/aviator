@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, Diamond, Eye, EyeOff, Hexagon, LayoutGrid, List, Lock, RefreshCw, RotateCcw, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, Diamond, Eye, EyeOff, Hexagon, LayoutGrid, List, Lock, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import {
   addPartner,
   confirmPayment,
@@ -555,6 +555,8 @@ function CheckoutSettings({
 }) {
   const [form, setForm] = useState<GatewayCheckout>(gateway.checkout);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef(0);
   const dirty = useRef(false);
   const applied = useRef("");
   const checkoutKey = JSON.stringify(gateway.checkout);
@@ -595,6 +597,9 @@ function CheckoutSettings({
               dirty.current = false;
               bumpGateway();
               onChange(next);
+              setSaved(true);
+              window.clearTimeout(savedTimer.current);
+              savedTimer.current = window.setTimeout(() => setSaved(false), 2000);
             })
             .catch((err) => setError(err instanceof Error ? err.message : "Could not save checkout."))
             .finally(() => onBusy(false));
@@ -642,7 +647,22 @@ function CheckoutSettings({
           SAVE SETTINGS
         </button>
       </form>
+      {saved ? <SavedFlash /> : null}
     </section>
+  );
+}
+
+function SavedFlash() {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 px-6" role="status" aria-live="polite">
+      <section className="save-flash w-full max-w-xs rounded-[28px] border border-white/10 bg-[#111111] px-6 py-10 text-center shadow-[0_20px_60px_rgba(226,59,59,0.28)]">
+        <div className="mark-pop mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-b from-[#4ade80] to-[#16a34a] shadow-[0_8px_16px_rgba(22,163,74,0.35)]">
+          <Check className="size-9 text-white" strokeWidth={3} aria-hidden />
+        </div>
+        <p className="mt-6 text-2xl font-black">Saved</p>
+        <p className="mt-2 text-sm font-semibold text-[#9aa3b2]">Payment settings are updated.</p>
+      </section>
+    </div>
   );
 }
 

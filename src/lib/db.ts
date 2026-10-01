@@ -96,6 +96,7 @@ function createNeonSql(): Promise<Sql> {
     const pool = new Pool({
       connectionString: databaseUrl,
       max: 3,
+      connectionTimeoutMillis: 8000,
       ssl: /localhost|127\.0\.0\.1/.test(databaseUrl) ? undefined : { rejectUnauthorized: false },
     });
     return toSql(async <T>(text: string, params: unknown[]) => {

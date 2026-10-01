@@ -32,7 +32,7 @@ function Home() {
   const { user, isPending } = useCurrentUserState();
   const [linked, setLinked] = useState(false);
   const [country, setCountry] = useState<"Ghana" | "Nigeria" | null>(null);
-  const registered = !isPending && Boolean(user) && !user?.isDevFallback && linked;
+  const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
   const [loading, setLoading] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const [tick, setTick] = useState(0);
@@ -68,22 +68,22 @@ function Home() {
   }, [loading, navigate]);
 
   useEffect(() => {
-    if (!signalOpen) return;
+    if (!signalOpen || isPending) return;
     const id = window.setTimeout(() => {
-      if (registered) {
+      if (signedIn && linked) {
         void navigate({
           to: country === "Nigeria" ? "/nigeria-pay" : "/packages",
           search: country === "Nigeria" ? {} : { stay: 1 },
           viewTransition: true,
         });
-      } else if (user && !user.isDevFallback) {
+      } else if (signedIn) {
         void navigate({ to: "/connect", viewTransition: true });
       } else {
         void navigate({ to: "/login", viewTransition: true });
       }
     }, 2000);
     return () => window.clearTimeout(id);
-  }, [signalOpen, registered, user, country, navigate]);
+  }, [signalOpen, isPending, signedIn, linked, country, navigate]);
 
   useEffect(() => {
     if (ref) window.localStorage.setItem("aviator-ref", ref);
@@ -113,13 +113,14 @@ function Home() {
 
   function runSignal() {
     if (loading || isPending) return;
-    if (!user || user.isDevFallback) {
+    if (signedIn) {
+      if (!linked) {
+        void navigate({ to: "/connect", viewTransition: true });
+        return;
+      }
+    } else {
       const known = window.localStorage.getItem("aviator-hack-email");
       void navigate({ to: known ? "/login" : "/register", viewTransition: true });
-      return;
-    }
-    if (!linked) {
-      void navigate({ to: "/connect", viewTransition: true });
       return;
     }
     setLoading(true);

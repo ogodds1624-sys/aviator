@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { getApprovedTestimonies, submitTestimony } from "@/lib/admin-snapshot";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 
 const LINKS = [
@@ -33,6 +34,8 @@ export function SiteFooter() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [returning, setReturning] = useState(false);
+  const { user, isPending } = useCurrentUserState();
+  const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
   const store = useLiveStorefront();
   const whatsapp = store?.whatsapp ?? "";
 
@@ -165,7 +168,11 @@ export function SiteFooter() {
         <section>
           <h2 className="text-xs font-extrabold tracking-[0.16em] text-gold">LINKS</h2>
           <ul className="mt-3 space-y-2">
-            {(returning ? LINKS.filter((item) => item.to !== "/register") : LINKS).map((item) => (
+            {LINKS.filter((item) => {
+              if (signedIn && (item.to === "/login" || item.to === "/register")) return false;
+              if (returning && item.to === "/register") return false;
+              return true;
+            }).map((item) => (
               <li key={item.to}>
                 <Link to={item.to} className="text-sm font-semibold text-white/80 no-underline hover:text-white">
                   {item.label}

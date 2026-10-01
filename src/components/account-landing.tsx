@@ -130,6 +130,14 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     return () => window.clearTimeout(id);
   }, [countryWait, navigate]);
 
+  if (isPending || (user && !user.isDevFallback && !countryStep)) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
+  }
+
   if (countryStep) {
     return (
       <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8">

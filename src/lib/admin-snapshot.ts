@@ -145,6 +145,16 @@ export function shiftDayKey(key: string, days: number, timeZone: string) {
   return dayKeyInZone(date, timeZone);
 }
 
+export function isNairaPayment(amount: number, country: string | null | undefined) {
+  if (country === "Nigeria") return true;
+  if (country === "Ghana") return false;
+  return amount === 35000 || amount === 55000 || amount === 75000;
+}
+
+export function commissionCut(amount: number, percent: number) {
+  return Math.round((amount * percent) / 100);
+}
+
 export function liveDayLabel(key: string, timeZone: string) {
   const [year, month, day] = key.split("-").map(Number);
   const date = new Date(Date.UTC(year, (month || 1) - 1, day || 1, 12));
@@ -159,6 +169,18 @@ function accraDayKey(value: Date | string) {
 
 function shiftAccraDay(key: string, days: number) {
   return shiftDayKey(key, days, GHANA_TZ);
+}
+
+async function partnerCodeFor(sql: Sql, referredBy: string) {
+  const value = referredBy.trim();
+  if (!value) return "";
+  const rows = await sql<{ code: string }>`
+    select code from partners
+    where lower(code) = lower(${value}) or lower(name) = lower(${value})
+    order by case when lower(code) = lower(${value}) then 0 else 1 end
+    limit 1
+  `;
+  return rows[0]?.code || value;
 }
 
 async function ensurePayments(sql: Sql) {
@@ -347,7 +369,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     select lower(referred_by) as referred_by, count(*) as total from referrals group by lower(referred_by)
   `;
   const referralRevenue = await sql<{ referred_by: string; ghs: number | string; ngn: number | string }>`
-    select lower(r.referred_by) as referred_by,
+    select lower(partner.code) as referred_by,
       coalesce(sum(case when
         c.country = 'Nigeria'
         or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
@@ -356,10 +378,25 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
         c.country = 'Nigeria'
         or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
         then p.amount else 0 end), 0) as ngn
-    from referrals r
-    join payments p on p.user_id = r.user_id and p.status = 'confirmed'
+    from payments p
+    left join referrals r on r.user_id = p.user_id
     left join player_country c on c.user_id = p.user_id
-    group by lower(r.referred_by)
+    join lateral (
+      select code from partners
+      where lower(code) = lower(coalesce(nullif(p.referred_by, ''), ''))
+         or lower(name) = lower(coalesce(nullif(p.referred_by, ''), ''))
+         or lower(code) = lower(coalesce(r.referred_by, ''))
+         or lower(name) = lower(coalesce(r.referred_by, ''))
+      order by case
+        when lower(code) = lower(coalesce(nullif(p.referred_by, ''), '')) then 0
+        when lower(name) = lower(coalesce(nullif(p.referred_by, ''), '')) then 1
+        when lower(code) = lower(coalesce(r.referred_by, '')) then 2
+        else 3
+      end
+      limit 1
+    ) partner on true
+    where p.status = 'confirmed'
+    group by lower(partner.code)
   `;
   const countBy = new Map(referralCounts.map((row) => [row.referred_by, Number(row.total)]));
   const ghsBy = new Map(referralRevenue.map((row) => [row.referred_by, Number(row.ghs)]));
@@ -595,14 +632,17 @@ export const recordPayment = createServerFn({ method: "POST" })
         select referred_by from referrals where user_id = ${sessionUser.id}
       `;
       referredBy = refs[0]?.referred_by ?? "";
-      if (!referredBy && data.referredBy) {
-        referredBy = data.referredBy;
-        await sql`
-          insert into referrals (user_id, referred_by)
-          values (${sessionUser.id}, ${referredBy})
-          on conflict (user_id) do nothing
-        `;
-      }
+      if (!referredBy && data.referredBy) referredBy = data.referredBy;
+    } else if (data.referredBy) {
+      referredBy = data.referredBy;
+    }
+    referredBy = await partnerCodeFor(sql, referredBy);
+    if (sessionUser && referredBy) {
+      await sql`
+        insert into referrals (user_id, referred_by)
+        values (${sessionUser.id}, ${referredBy})
+        on conflict (user_id) do nothing
+      `;
     }
     const id = crypto.randomUUID();
     await sql`
@@ -639,13 +679,16 @@ export const confirmPayment = createServerFn({ method: "POST" })
       select user_id, referred_by from payments where id = ${data.id}
     `;
     const payment = linked[0];
-    if (payment?.user_id && !payment.referred_by) {
+    let referredBy = payment?.referred_by?.trim() ?? "";
+    if (!referredBy && payment?.user_id) {
       const refs = await sql<{ referred_by: string }>`
         select referred_by from referrals where user_id = ${payment.user_id}
       `;
-      if (refs[0]?.referred_by) {
-        await sql`update payments set referred_by = ${refs[0].referred_by} where id = ${data.id}`;
-      }
+      referredBy = refs[0]?.referred_by ?? "";
+    }
+    referredBy = await partnerCodeFor(sql, referredBy);
+    if (referredBy) {
+      await sql`update payments set referred_by = ${referredBy} where id = ${data.id}`;
     }
     return readSnapshot(sql);
   });
@@ -958,22 +1001,31 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       join sporty_accounts s on s.user_id = r.user_id
       where lower(r.referred_by) = ${code} or lower(r.referred_by) = ${name}
     `;
-    const payments = await sql<{ amount: number | string; created_at: string | Date; user_id: string }>`
-      select p.amount, coalesce(p.confirmed_at, p.created_at) as created_at, p.user_id
+    const payments = await sql<{ amount: number | string; created_at: string | Date; user_id: string; country: string | null }>`
+      select p.amount, coalesce(p.confirmed_at, p.created_at) as created_at, p.user_id, c.country
       from payments p
       left join referrals r on r.user_id = p.user_id
+      left join player_country c on c.user_id = p.user_id
+      join lateral (
+        select code from partners
+        where lower(code) = lower(coalesce(nullif(p.referred_by, ''), ''))
+           or lower(name) = lower(coalesce(nullif(p.referred_by, ''), ''))
+           or lower(code) = lower(coalesce(r.referred_by, ''))
+           or lower(name) = lower(coalesce(r.referred_by, ''))
+        order by case
+          when lower(code) = lower(coalesce(nullif(p.referred_by, ''), '')) then 0
+          when lower(name) = lower(coalesce(nullif(p.referred_by, ''), '')) then 1
+          when lower(code) = lower(coalesce(r.referred_by, '')) then 2
+          else 3
+        end
+        limit 1
+      ) partner on true
       where p.status = 'confirmed'
-        and (
-          lower(coalesce(p.referred_by, '')) = ${code}
-          or lower(coalesce(p.referred_by, '')) = ${name}
-          or lower(coalesce(r.referred_by, '')) = ${code}
-          or lower(coalesce(r.referred_by, '')) = ${name}
-        )
+        and lower(partner.code) = ${code}
     `;
-    const cut = (amount: number) => Math.round((amount * commission) / 100);
-    const nairaAmount = (amount: number) => amount === 35000 || amount === 55000 || amount === 75000;
-    const ghanaPayments = payments.filter((row) => !nairaAmount(Number(row.amount)));
-    const nigeriaPayments = payments.filter((row) => nairaAmount(Number(row.amount)));
+    const cut = (amount: number) => commissionCut(amount, commission);
+    const ghanaPayments = payments.filter((row) => !isNairaPayment(Number(row.amount), row.country));
+    const nigeriaPayments = payments.filter((row) => isNairaPayment(Number(row.amount), row.country));
     const revenue = ghanaPayments.reduce((sum, row) => sum + Number(row.amount), 0);
     const nigeriaRevenue = nigeriaPayments.reduce((sum, row) => sum + Number(row.amount), 0);
     const now = new Date();
@@ -1002,7 +1054,7 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
     const spendNgn = new Map<string, number>();
     for (const row of payments) {
       const amount = Number(row.amount);
-      const bucket = amount === 35000 || amount === 55000 || amount === 75000 ? spendNgn : spendGhs;
+      const bucket = isNairaPayment(amount, row.country) ? spendNgn : spendGhs;
       bucket.set(row.user_id, (bucket.get(row.user_id) ?? 0) + amount);
     }
     const referred = await sql<{ name: string; email: string; joined: string | Date; user_id: string; country: string | null }>`

@@ -375,13 +375,13 @@ function Overview({
         <Stat
           label="REVENUE BROUGHT IN"
           value={`GHS ${portal.revenue.toLocaleString("en-GH")}`}
-          note="Total. Does not reset."
+          note="Confirmed Ghana payments. Does not reset."
           icon={<CircleDollarSign className="size-4" />}
         />
         <Stat
           label={`YOUR EARNINGS · ${portal.commission}%`}
           value={`GHS ${portal.earnings.toLocaleString("en-GH")}`}
-          note={`you keep ${portal.commission}% of every Ghana deposit`}
+          note={`${portal.commission}% deducted from confirmed Ghana payments`}
           gold
           icon={<Star className="size-4" />}
         />
@@ -397,13 +397,13 @@ function Overview({
         <Stat
           label="REVENUE BROUGHT IN"
           value={`₦${portal.nigeriaRevenue.toLocaleString("en-NG")}`}
-          note="Total. Does not reset."
+          note="Confirmed Nigeria payments. Does not reset."
           icon={<CircleDollarSign className="size-4" />}
         />
         <Stat
           label={`YOUR EARNINGS · ${portal.commission}%`}
           value={`₦${portal.nigeriaEarnings.toLocaleString("en-NG")}`}
-          note={`you keep ${portal.commission}% of every Nigeria deposit`}
+          note={`${portal.commission}% deducted from confirmed Nigeria payments`}
           gold
           icon={<Star className="size-4" />}
         />
@@ -440,7 +440,7 @@ function DayList({
           <li key={country + day.label} className="partner-week week-row desk-row whitespace-nowrap text-sm">
             <span className={day.today ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{day.label}</span>
             <span className="text-[#8b95a7]">
-              {money(day.revenue)} · {money(day.cut)} yours
+              {money(day.revenue)} · {money(day.cut)} your cut
             </span>
           </li>
         ))}

@@ -696,6 +696,7 @@ function PartnerDesk({
         <h2 className="text-lg font-black">Add a Partner</h2>
         <form
           className="mt-4 grid gap-3 md:grid-cols-2"
+          autoComplete="off"
           onSubmit={(event) => {
             event.preventDefault();
             void run(async () => {
@@ -708,10 +709,33 @@ function PartnerDesk({
             });
           }}
         >
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
-          <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
-          <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
-          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Code (optional)" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+          <input value={name} onChange={(event) => setName(event.target.value)} name="partner-name" autoComplete="off" placeholder="Name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            name="partner-mail"
+            type="text"
+            inputMode="email"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="Partner email"
+            readOnly
+            onFocus={(event) => event.currentTarget.removeAttribute("readonly")}
+            className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none"
+          />
+          <input
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            name="partner-secret"
+            type="text"
+            autoComplete="off"
+            placeholder="Partner password"
+            readOnly
+            onFocus={(event) => event.currentTarget.removeAttribute("readonly")}
+            className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none"
+          />
+          <input value={code} onChange={(event) => setCode(event.target.value)} name="partner-code" autoComplete="off" placeholder="Code (optional)" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
           {error ? <p className="text-sm text-red md:col-span-2">{error}</p> : null}
           <button type="submit" disabled={busy} className="h-11 w-fit rounded-lg bg-red px-5 text-sm font-extrabold tracking-wide text-white disabled:opacity-60">
             ADD PARTNER

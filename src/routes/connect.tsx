@@ -69,15 +69,9 @@ function ConnectPage() {
 
   useEffect(() => {
     if (phase !== "loading") return;
-    const id = window.setTimeout(() => {
-      if (nigeria) {
-        void navigate({ to: "/nigeria-pay", viewTransition: true });
-        return;
-      }
-      setPhase("done");
-    }, nigeria ? 2000 : 3000);
+    const id = window.setTimeout(() => setPhase("done"), 3000);
     return () => window.clearTimeout(id);
-  }, [phase, nigeria, navigate]);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "done") return;
@@ -88,10 +82,10 @@ function ConnectPage() {
   useEffect(() => {
     if (phase !== "leaving") return;
     const id = window.setTimeout(() => {
-      void navigate({ to: "/packages" });
+      void navigate({ to: nigeria ? "/nigeria-pay" : "/packages" });
     }, 2000);
     return () => window.clearTimeout(id);
-  }, [phase, navigate]);
+  }, [phase, navigate, nigeria]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();

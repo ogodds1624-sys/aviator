@@ -369,7 +369,7 @@ function Overview({
         <Stat
           label="TODAY'S REVENUE"
           value={`GHS ${portal.todayRevenue.toLocaleString("en-GH")}`}
-          note={`${portal.todaySales} sales today · resets at 23:59`}
+          note={`${portal.days.find((day) => day.today)?.label ?? "today"} · ${portal.todaySales} sales · resets at midnight`}
           icon={<CalendarDays className="size-4" />}
         />
         <Stat
@@ -391,7 +391,7 @@ function Overview({
         <Stat
           label="TODAY'S REVENUE"
           value={`₦${portal.nigeriaTodayRevenue.toLocaleString("en-NG")}`}
-          note={`${portal.nigeriaTodaySales} sales today · resets at 23:59`}
+          note={`${portal.nigeriaDays.find((day) => day.today)?.label ?? "today"} · ${portal.nigeriaTodaySales} sales · resets at midnight`}
           icon={<CalendarDays className="size-4" />}
         />
         <Stat
@@ -431,12 +431,14 @@ function DayList({
       <div className="flex items-center gap-3 px-5 py-5">
         <h2 className="text-lg font-black">{title}</h2>
         <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">{country}</span>
-        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">last 7 days</span>
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">
+          {days.find((day) => day.today)?.label ?? "today"}
+        </span>
       </div>
-      <ul>
+      <ul className="overflow-x-auto">
         {days.map((day) => (
-          <li key={country + day.label} className="desk-row grid-cols-[2fr_1fr] text-sm">
-            <span className={day.label === "TODAY" ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{day.label}</span>
+          <li key={country + day.label} className="partner-week week-row desk-row whitespace-nowrap text-sm">
+            <span className={day.today ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{day.label}</span>
             <span className="text-[#8b95a7]">
               {money(day.revenue)} · {money(day.cut)} yours
             </span>

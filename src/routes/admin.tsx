@@ -6,8 +6,13 @@ import {
   confirmPayment,
   deletePartner,
   deleteTestimony,
+  dayKeyInZone,
   getAdminSnapshot,
   getPaymentProof,
+  GHANA_TZ,
+  liveDayLabel,
+  NIGERIA_TZ,
+  shiftDayKey,
   rejectPayment,
   saveGatewayCheckout,
   saveGatewayRates,
@@ -229,27 +234,17 @@ function AdminPage() {
 
   const view = snapshot ?? EMPTY_SNAPSHOT;
   const nairaAmount = (amount: number) => amount === 35000 || amount === 55000 || amount === 75000;
-  const accraToday = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Accra",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const now = new Date();
+  const ghanaToday = dayKeyInZone(now, GHANA_TZ);
+  const nigeriaToday = dayKeyInZone(now, NIGERIA_TZ);
   const confirmed = view.payments.filter((payment) => payment.status === "confirmed");
-  const isToday = (iso: string) =>
-    Boolean(iso) &&
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Accra",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(iso)) === accraToday;
+  const onDay = (iso: string, key: string, timeZone: string) => Boolean(iso) && dayKeyInZone(iso, timeZone) === key;
   const ghanaPayments = confirmed.filter((payment) => !nairaAmount(payment.amount));
   const nigeriaPayments = confirmed.filter((payment) => nairaAmount(payment.amount));
   const ghanaRevenue = ghanaPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const nigeriaRevenue = nigeriaPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const ghanaDaily = ghanaPayments.filter((payment) => isToday(payment.confirmedAt)).reduce((sum, payment) => sum + payment.amount, 0);
-  const nigeriaDaily = nigeriaPayments.filter((payment) => isToday(payment.confirmedAt)).reduce((sum, payment) => sum + payment.amount, 0);
+  const ghanaDaily = ghanaPayments.filter((payment) => onDay(payment.confirmedAt, ghanaToday, GHANA_TZ)).reduce((sum, payment) => sum + payment.amount, 0);
+  const nigeriaDaily = nigeriaPayments.filter((payment) => onDay(payment.confirmedAt, nigeriaToday, NIGERIA_TZ)).reduce((sum, payment) => sum + payment.amount, 0);
   const pendingCount = view.payments.filter((payment) => payment.status === "pending").length;
   const partnerWait = view.partners.filter((partner) => partner.status === "pending").length;
 
@@ -394,12 +389,12 @@ function AdminPage() {
               </div>
               <MemberList members={view.members} />
               <div className="stat-grid mt-8">
-                <StatCard label="DAILY GHANA" value={`GHS ${ghanaDaily.toLocaleString("en-GH")}`} note="Resets at 23:59" gold icon={<GhanaFlag />} iconClass="bg-white/10" />
+                <StatCard label="DAILY GHANA" value={`GHS ${ghanaDaily.toLocaleString("en-GH")}`} note={`${liveDayLabel(ghanaToday, GHANA_TZ)} · resets at midnight`} gold icon={<GhanaFlag />} iconClass="bg-white/10" />
                 <StatCard label="TOTAL GHANA" value={`GHS ${ghanaRevenue.toLocaleString("en-GH")}`} note="Does not reset" gold icon={<GhanaFlag />} iconClass="bg-white/10" />
               </div>
               <WeekRevenue payments={view.payments} country="Ghana" />
               <div className="stat-grid mt-4">
-                <StatCard label="DAILY NIGERIA" value={`₦${nigeriaDaily.toLocaleString("en-NG")}`} note="Resets at 23:59" icon={<NigeriaFlag />} iconClass="bg-white/10" />
+                <StatCard label="DAILY NIGERIA" value={`₦${nigeriaDaily.toLocaleString("en-NG")}`} note={`${liveDayLabel(nigeriaToday, NIGERIA_TZ)} · resets at midnight`} icon={<NigeriaFlag />} iconClass="bg-white/10" />
                 <StatCard label="TOTAL NIGERIA" value={`₦${nigeriaRevenue.toLocaleString("en-NG")}`} note="Does not reset" icon={<NigeriaFlag />} iconClass="bg-white/10" />
               </div>
               <WeekRevenue payments={view.payments} country="Nigeria" />
@@ -1107,22 +1102,23 @@ function TestimonyDesk({
 }
 
 function WeekRevenue({ payments, country }: { payments: AdminSnapshot["payments"]; country: "Ghana" | "Nigeria" }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(id);
+  }, []);
   const nairaAmount = (amount: number) => amount === 35000 || amount === 55000 || amount === 75000;
-  const dayKey = (value: Date | string) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Accra", year: "numeric", month: "2-digit", day: "2-digit" }).format(
-      value instanceof Date ? value : new Date(value),
-    );
-  const todayKey = dayKey(new Date());
-  const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const [year, month, day] = todayKey.split("-").map(Number);
+  const timeZone = country === "Nigeria" ? NIGERIA_TZ : GHANA_TZ;
+  const todayKey = dayKeyInZone(now, timeZone);
   const rows = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(Date.UTC(year, month - 1, day + (index - 6), 12));
-    const key = dayKey(date);
-    const approved = payments.filter((payment) => payment.status === "confirmed" && payment.confirmedAt && dayKey(payment.confirmedAt) === key);
+    const key = shiftDayKey(todayKey, index - 6, timeZone);
+    const approved = payments.filter((payment) => payment.status === "confirmed" && payment.confirmedAt && dayKeyInZone(payment.confirmedAt, timeZone) === key);
     const ghana = approved.filter((payment) => !nairaAmount(payment.amount)).reduce((sum, payment) => sum + payment.amount, 0);
     const nigeria = approved.filter((payment) => nairaAmount(payment.amount)).reduce((sum, payment) => sum + payment.amount, 0);
     return {
-      label: index === 6 ? "TODAY" : `${weekdays[date.getUTCDay()]} ${Number(key.slice(8))}`,
+      key,
+      label: liveDayLabel(key, timeZone),
+      today: key === todayKey,
       text: country === "Ghana" ? `GHS ${ghana.toLocaleString("en-GH")}` : `₦${nigeria.toLocaleString("en-NG")}`,
     };
   });
@@ -1131,12 +1127,12 @@ function WeekRevenue({ payments, country }: { payments: AdminSnapshot["payments"
       <div className="flex items-center gap-3 px-5 py-5">
         <h2 className="text-lg font-black">Daily Revenue</h2>
         <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">{country}</span>
-        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">last 7 days</span>
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-bold text-[#9aa3b2]">{liveDayLabel(todayKey, timeZone)}</span>
       </div>
       <ul>
         {rows.map((row) => (
-          <li key={country + row.label} className="week-row desk-row grid-cols-[2fr_1fr] text-sm">
-            <span className={row.label === "TODAY" ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{row.label}</span>
+          <li key={country + row.key} className="week-row desk-row grid-cols-[2fr_1fr] text-sm">
+            <span className={row.today ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{row.label}</span>
             <span className="text-[#8b95a7]">{row.text}</span>
           </li>
         ))}

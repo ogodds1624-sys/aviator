@@ -93,6 +93,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
+.desk-shell .partner-week.desk-row {
+  grid-template-columns: 7.5rem minmax(16rem, 1fr);
+  row-gap: 0;
+}
 
 @media (max-width: 767px) {
   .desk-shell .desk-row {
@@ -109,6 +113,11 @@
   }
   .desk-shell .week-row.desk-row {
     grid-template-columns: 2fr 1fr;
+    row-gap: 0;
+  }
+  .desk-shell .partner-week.desk-row {
+    grid-template-columns: 7.5rem minmax(16rem, 1fr);
+    min-width: 24.5rem;
     row-gap: 0;
   }
 }

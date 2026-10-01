@@ -109,8 +109,8 @@ export type PartnerPortal = {
   nigeriaTodayCut: number;
   nigeriaRevenue: number;
   nigeriaEarnings: number;
-  days: { label: string; revenue: number; cut: number }[];
-  nigeriaDays: { label: string; revenue: number; cut: number }[];
+  days: { label: string; revenue: number; cut: number; today: boolean }[];
+  nigeriaDays: { label: string; revenue: number; cut: number; today: boolean }[];
   referrals: {
     name: string;
     email: string;
@@ -125,21 +125,40 @@ export type PartnerPortal = {
 
 let schemaPromise: Promise<void> | null = null;
 
-function accraDayKey(value: Date | string) {
+export const GHANA_TZ = "Africa/Accra";
+export const NIGERIA_TZ = "Africa/Lagos";
+
+export function dayKeyInZone(value: Date | string, timeZone: string) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Accra",
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
 }
 
-function shiftAccraDay(key: string, days: number) {
+export function shiftDayKey(key: string, days: number, timeZone: string) {
   const [year, month, day] = key.split("-").map(Number);
   const date = new Date(Date.UTC(year, (month || 1) - 1, (day || 1) + days, 12));
-  return accraDayKey(date);
+  return dayKeyInZone(date, timeZone);
+}
+
+export function liveDayLabel(key: string, timeZone: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(Date.UTC(year, (month || 1) - 1, day || 1, 12));
+  const weekday = new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short" }).format(date).replace(".", "").toUpperCase();
+  const monthName = new Intl.DateTimeFormat("en-GB", { timeZone, month: "short" }).format(date).replace(".", "").toUpperCase();
+  return `${weekday} ${day} ${monthName}`;
+}
+
+function accraDayKey(value: Date | string) {
+  return dayKeyInZone(value, GHANA_TZ);
+}
+
+function shiftAccraDay(key: string, days: number) {
+  return shiftDayKey(key, days, GHANA_TZ);
 }
 
 async function ensurePayments(sql: Sql) {
@@ -957,29 +976,28 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
     const nigeriaPayments = payments.filter((row) => nairaAmount(Number(row.amount)));
     const revenue = ghanaPayments.reduce((sum, row) => sum + Number(row.amount), 0);
     const nigeriaRevenue = nigeriaPayments.reduce((sum, row) => sum + Number(row.amount), 0);
-    const todayKey = accraDayKey(new Date());
-    const todayPayments = ghanaPayments.filter((row) => accraDayKey(row.created_at) === todayKey);
-    const nigeriaTodayPayments = nigeriaPayments.filter((row) => accraDayKey(row.created_at) === todayKey);
+    const now = new Date();
+    const ghanaToday = dayKeyInZone(now, GHANA_TZ);
+    const nigeriaToday = dayKeyInZone(now, NIGERIA_TZ);
+    const todayPayments = ghanaPayments.filter((row) => dayKeyInZone(row.created_at, GHANA_TZ) === ghanaToday);
+    const nigeriaTodayPayments = nigeriaPayments.filter((row) => dayKeyInZone(row.created_at, NIGERIA_TZ) === nigeriaToday);
     const todayRevenue = todayPayments.reduce((sum, row) => sum + Number(row.amount), 0);
     const nigeriaTodayRevenue = nigeriaTodayPayments.reduce((sum, row) => sum + Number(row.amount), 0);
-    const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const buildDays = (rows: typeof payments) =>
+    const buildDays = (rows: typeof payments, timeZone: string, todayKey: string) =>
       Array.from({ length: 7 }, (_, index) => {
-        const key = shiftAccraDay(todayKey, index - 6);
+        const key = shiftDayKey(todayKey, index - 6, timeZone);
         const amount = rows
-          .filter((row) => accraDayKey(row.created_at) === key)
+          .filter((row) => dayKeyInZone(row.created_at, timeZone) === key)
           .reduce((sum, row) => sum + Number(row.amount), 0);
-        const [, , day] = key.split("-").map(Number);
-        const [year, month, dayNum] = key.split("-").map(Number);
-        const dated = new Date(Date.UTC(year, month - 1, dayNum, 12));
         return {
-          label: index === 6 ? "TODAY" : `${weekdays[dated.getUTCDay()]} ${day}`,
+          label: liveDayLabel(key, timeZone),
           revenue: amount,
           cut: cut(amount),
+          today: key === todayKey,
         };
       });
-    const days = buildDays(ghanaPayments);
-    const nigeriaDays = buildDays(nigeriaPayments);
+    const days = buildDays(ghanaPayments, GHANA_TZ, ghanaToday);
+    const nigeriaDays = buildDays(nigeriaPayments, NIGERIA_TZ, nigeriaToday);
     const spendGhs = new Map<string, number>();
     const spendNgn = new Map<string, number>();
     for (const row of payments) {

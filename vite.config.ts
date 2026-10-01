@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -175,6 +175,47 @@ export default defineConfig(({ command, isPreview }) => ({
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
+            hooks: {
+              // PGLite's wasm looks for pglite.data beside the bundled module
+              // (`/var/task/_libs/pglite.data`). Nitro traces the JS but not
+              // that data file, so sign-in crashes with ENOENT on Vercel.
+              compiled(built) {
+                const root = built.options.output.dir;
+                const srcDir = join(process.cwd(), "node_modules/@electric-sql/pglite/dist");
+                const assets = ["pglite.data", "pglite.wasm", "initdb.wasm"];
+                const destDirs = new Set<string>();
+                const walk = (dir: string) => {
+                  let entries: string[];
+                  try {
+                    entries = readdirSync(dir);
+                  } catch {
+                    return;
+                  }
+                  for (const name of entries) {
+                    const full = join(dir, name);
+                    let isDir = false;
+                    try {
+                      isDir = statSync(full).isDirectory();
+                    } catch {
+                      continue;
+                    }
+                    if (!isDir) continue;
+                    if (name === "_libs" || name === "dist") destDirs.add(full);
+                    walk(full);
+                  }
+                };
+                if (root) walk(root);
+                for (const dir of destDirs) {
+                  for (const asset of assets) {
+                    const from = join(srcDir, asset);
+                    const to = join(dir, asset);
+                    if (!existsSync(from) || existsSync(to)) continue;
+                    mkdirSync(dir, { recursive: true });
+                    copyFileSync(from, to);
+                  }
+                }
+              },
+            },
           }),
         ]
       : []),

@@ -542,6 +542,18 @@ function PaymentGateway({
   );
 }
 
+function hasCheckoutSettings(form: GatewayCheckout) {
+  const text = (value: string) => value.trim().length > 0;
+  const account = (row: BankAccount) => text(row.bank) || text(row.number) || text(row.name);
+  return (
+    text(form.whatsapp) ||
+    text(form.email) ||
+    form.wallets.some((wallet) => text(wallet.number) || text(wallet.name)) ||
+    form.banks.some(account) ||
+    form.nigeriaBanks.some(account)
+  );
+}
+
 function CheckoutSettings({
   gateway,
   busy,
@@ -590,6 +602,7 @@ function CheckoutSettings({
         className="mt-4 grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!hasCheckoutSettings(form)) return;
           setError(null);
           onBusy(true);
           void saveGatewayCheckout({ data: form })
@@ -643,7 +656,7 @@ function CheckoutSettings({
           ADD NIGERIA ACCOUNT
         </button>
         {error ? <p className="text-sm text-red">{error}</p> : null}
-        <button type="submit" disabled={busy} className="h-11 w-fit rounded-lg bg-red px-5 text-sm font-extrabold tracking-wide text-white disabled:opacity-60">
+        <button type="submit" disabled={busy || !hasCheckoutSettings(form)} className="h-11 w-fit rounded-lg bg-red px-5 text-sm font-extrabold tracking-wide text-white disabled:pointer-events-none disabled:opacity-40">
           SAVE SETTINGS
         </button>
       </form>

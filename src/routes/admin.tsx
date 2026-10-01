@@ -123,14 +123,7 @@ const EMPTY_SNAPSHOT: AdminSnapshot = {
   },
 };
 
-const memberCols = "desk-row grid-cols-[minmax(0,1.4fr)_5.5rem_7.5rem_9rem]";
-const phoneMemberCols = "grid grid-cols-[5.75rem_5.5rem_minmax(0,1fr)] items-center gap-x-2 px-3";
-
-function memberDate(value: string) {
-  const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
-}
+const memberCols = "member-row desk-row grid-cols-[minmax(0,1.4fr)_5.5rem_7.5rem_9rem]";
 const txCols = "tx-row desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_8.5rem_7.5rem]";
 
 function AdminPage() {
@@ -1017,34 +1010,18 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
           className="mt-4 h-12 w-full rounded-xl border border-white/15 bg-ink px-3 text-sm outline-none"
         />
       </div>
-      {shown.length === 0 ? (
-        <p className="px-4 py-5 text-sm text-[#6b7280]">{members.length === 0 ? "No accounts yet." : "No members match that search."}</p>
-      ) : (
-        <>
-          <div className="md:hidden">
-            <div className={phoneMemberCols + " border-t border-[#333] bg-white/[0.03] py-2.5 text-[10px] font-extrabold tracking-[0.12em] text-[#9aa3b2]"}>
-              <span>DATE</span>
-              <span className="text-center">STATUS</span>
-              <span>REFERRAL NAME</span>
-            </div>
-            {shown.map((member) => (
-              <div key={member.id} className={phoneMemberCols + " min-h-12 border-t border-[#333] py-2.5 text-xs"}>
-                <span className="tabular-nums font-semibold text-[#c5cad3]">{memberDate(member.createdAt)}</span>
-                <span className="justify-self-center">
-                  <span className={member.paid ? "pill-active" : "pill-unpaid"}>{member.paid ? "ACTIVE" : "UNPAID"}</span>
-                </span>
-                <span className="truncate font-bold">{member.name}</span>
-              </div>
-            ))}
+      <div className="overflow-x-auto">
+        <div className="min-w-[40rem]">
+          <div className={memberCols + " desk-head text-[11px] tracking-[0.14em]"}>
+            <span>MEMBER</span>
+            <span className="text-center">JOINED</span>
+            <span className="text-center">STATUS</span>
+            <span className="text-center">REFERRED BY</span>
           </div>
-          <div className="hidden md:block">
-            <div className={memberCols + " desk-head text-[11px] tracking-[0.14em]"}>
-              <span>MEMBER</span>
-              <span className="text-center">JOINED</span>
-              <span className="text-center">STATUS</span>
-              <span className="text-center">REFERRED BY</span>
-            </div>
-            {shown.map((member) => {
+          {shown.length === 0 ? (
+            <p className="px-4 py-5 text-sm text-[#6b7280]">{members.length === 0 ? "No accounts yet." : "No members match that search."}</p>
+          ) : (
+            shown.map((member) => {
               const date = member.createdAt ? new Date(member.createdAt) : null;
               return (
                 <article key={member.id} className={memberCols}>
@@ -1067,10 +1044,10 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
                   </div>
                 </article>
               );
-            })}
-          </div>
-        </>
-      )}
+            })
+          )}
+        </div>
+      </div>
     </section>
   );
 }
@@ -1104,7 +1081,7 @@ function TestimonyDesk({
         <p className="border-t border-white/10 px-4 py-6 text-sm text-[#8b95a7]">No testimonies yet.</p>
       ) : (
         rows.map((row) => (
-          <article key={row.id} className="flex flex-col gap-3 border-t border-[#333] px-4 py-4 md:flex-row md:items-center">
+          <article key={row.id} className="flex flex-row items-center gap-3 border-t border-[#333] px-4 py-4">
             <div className="min-w-0 flex-1">
               <p className="font-extrabold">
                 {row.name} <span className="text-sm font-semibold text-[#8b95a7]">{row.place}</span> <span className="text-gold">{"★".repeat(row.stars)}</span>
@@ -1158,7 +1135,7 @@ function WeekRevenue({ payments, country }: { payments: AdminSnapshot["payments"
       </div>
       <ul>
         {rows.map((row) => (
-          <li key={country + row.label} className="desk-row grid-cols-[2fr_1fr] text-sm">
+          <li key={country + row.label} className="week-row desk-row grid-cols-[2fr_1fr] text-sm">
             <span className={row.label === "TODAY" ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{row.label}</span>
             <span className="text-[#8b95a7]">{row.text}</span>
           </li>

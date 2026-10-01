@@ -17,6 +17,21 @@ export const Route = createFileRoute("/api/auth/$")({
         }
       },
       POST: async ({ request }) => {
+        if (request.headers.get("x-auth-debug") === "1") {
+          try {
+            const { getPglite, dbSource } = await import("@/lib/db");
+            const pg = await getPglite();
+            const tables = await pg.query<{ tablename: string }>(
+              "select tablename from pg_tables where schemaname = 'public'",
+            );
+            return Response.json({ ok: true, dbSource, tables: tables.rows });
+          } catch (err) {
+            return Response.json(
+              { ok: false, message: err instanceof Error ? err.message : String(err) },
+              { status: 500 },
+            );
+          }
+        }
         try {
           return await auth.handler(request);
         } catch (err) {

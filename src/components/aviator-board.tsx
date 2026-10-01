@@ -162,19 +162,30 @@ export function AviatorBoard() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const start = point(0);
+
   return (
-    <svg viewBox="0 0 360 470" className="block h-auto w-full bg-ink" role="img" aria-label="Live Aviator odds">
+    <svg
+      viewBox="0 0 360 470"
+      width="360"
+      height="470"
+      className="block h-auto w-full"
+      style={{ aspectRatio: "360 / 470", backgroundColor: "#12081f" }}
+      role="img"
+      aria-label="Live Aviator odds"
+    >
       <defs>
         <linearGradient id={rayId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#2a1458" />
-          <stop offset="55%" stopColor="#12081f" />
-          <stop offset="100%" stopColor="#050308" />
+          <stop offset="0%" stopColor="#3b1d73" />
+          <stop offset="55%" stopColor="#1a0d33" />
+          <stop offset="100%" stopColor="#0b0614" />
         </linearGradient>
         <linearGradient id={fillId} x1="0" y1="1" x2="0" y2="0">
           <stop offset="0%" stopColor="#ff2a2a" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#ff5a6a" stopOpacity="0.35" />
         </linearGradient>
       </defs>
+      <rect width="360" height="300" fill="#1a0d33" />
       <rect width="360" height="300" fill={`url(#${rayId})`} />
       {Array.from({ length: 14 }).map((_, i) => (
         <line
@@ -183,7 +194,7 @@ export function AviatorBoard() {
           y1={20 + i * 28}
           x2="360"
           y2={-40 + i * 18}
-          stroke="rgba(255,255,255,0.04)"
+          stroke="rgba(255,255,255,0.06)"
           strokeWidth="18"
         />
       ))}
@@ -202,8 +213,15 @@ export function AviatorBoard() {
           </text>
         ))}
       </g>
-      <path ref={fillRef} fill={`url(#${fillId})`} />
-      <path ref={strokeRef} fill="none" stroke="#ff4d6a" strokeWidth="3" strokeLinejoin="round" />
+      <path ref={fillRef} d={fillPath(0.35)} fill={`url(#${fillId})`} />
+      <path
+        ref={strokeRef}
+        d={curvePath(0.35)}
+        fill="none"
+        stroke="#ff4d6a"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
       <text
         ref={oddsRef}
         x="180"
@@ -216,7 +234,7 @@ export function AviatorBoard() {
       >
         1.00x
       </text>
-      <g ref={planeRef}>
+      <g ref={planeRef} transform={`translate(${start.x} ${start.y})`}>
         <g transform="translate(-30 -16)">
           <path d="M6 16 L16 8 L14 16 L16 24 Z" fill="#b00000" />
           <path d="M14 14 C28 10 46 10 58 15 C46 20 28 20 14 16 Z" fill="#ff1f1f" />

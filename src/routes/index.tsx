@@ -209,8 +209,20 @@ function Home() {
       <main id="desk" className="page-wrap">
         <div className="desk-layout">
         <article className="overflow-hidden rounded-3xl border border-line bg-ink">
-          <div className="relative">
-            <AviatorBoard />
+          <div className="relative aspect-[16/10] overflow-hidden bg-[#12081f]">
+            <img
+              src="/media/aviator.jpg"
+              alt="Aviator live round"
+              width={960}
+              height={600}
+              className="h-full w-full object-cover"
+              decoding="async"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full border border-red/50 bg-black/60 px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">
+              <span className="live-dot size-2 rounded-full bg-red" />
+              LIVE BOARD
+            </div>
           </div>
           <div className="px-4 py-4">
             <h3 className="hero-title text-2xl font-black tracking-tight">Aviator Predictor</h3>

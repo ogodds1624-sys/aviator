@@ -747,13 +747,13 @@ function PartnerDesk({
           <h2 className="text-lg font-black">Partners</h2>
           <p className="mt-1 text-sm text-[#8b95a7]">Members who open /?ref=CODE are credited to this partner in Ghana and Nigeria.</p>
         </div>
-        <div className="desk-row desk-head grid-cols-[minmax(0,1.2fr)_6rem_7rem_minmax(0,1.2fr)_4.5rem_7rem_8rem] text-[11px] tracking-[0.12em]">
+        <div className={partnerCols + " desk-head text-[11px] tracking-[0.12em]"}>
           <span>PARTNER</span>
           <span>STATUS</span>
           <span>CODE</span>
           <span>REFERRAL LINK</span>
           <span>COMMISSION</span>
-          <span>REVENUE</span>
+          <span className="pl-4">REVENUE</span>
           <span>ACTIONS</span>
         </div>
         {partners.length === 0 ? (
@@ -762,7 +762,7 @@ function PartnerDesk({
           partners.map((partner) => {
             const link = `${window.location.origin}/?ref=${partner.code}`;
             return (
-              <article key={partner.id} className="desk-row grid-cols-[minmax(0,1.2fr)_6rem_7rem_minmax(0,1.2fr)_4.5rem_7rem_8rem] text-sm">
+              <article key={partner.id} className={partnerCols + " text-sm"}>
                 <div className="min-w-0">
                   <p className="truncate font-extrabold">{partner.name}</p>
                   <p className="truncate text-xs text-[#6b7280]">{partner.email}</p>
@@ -782,9 +782,9 @@ function PartnerDesk({
                   </button>
                 </div>
                 <CommissionRate value={partner.commission} disabled={busy} onSave={(commission) => void run(() => setPartnerCommission({ data: { id: partner.id, commission } }))} />
-                <span className="text-xs font-bold leading-4">
-                  GHS {partner.revenue.toLocaleString("en-GH")}
-                  <br />₦{partner.nigeriaRevenue.toLocaleString("en-NG")}
+                <span className="pl-4 text-xs font-bold leading-4">
+                  <span className="block whitespace-nowrap">GHS {partner.revenue.toLocaleString("en-GH")}</span>
+                  <span className="block whitespace-nowrap">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
                 </span>
                 <div className="flex flex-col items-start gap-1">
                   {partner.status === "pending" ? (
@@ -812,9 +812,13 @@ function PartnerDesk({
 function CommissionRate({ value, disabled, onSave }: { value: number; disabled: boolean; onSave: (commission: number) => void }) {
   const [draft, setDraft] = useState(value > 0 ? String(value) : "");
   const [focused, setFocused] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const seen = useRef(value);
 
   useEffect(() => {
-    if (!focused) setDraft(value > 0 ? String(value) : "");
+    if (seen.current === value || focused) return;
+    seen.current = value;
+    setDraft(value > 0 ? String(value) : "");
   }, [value, focused]);
 
   function save() {
@@ -824,28 +828,40 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
       return;
     }
     if (next !== value) onSave(next);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1200);
   }
 
   return (
-    <input
-      value={draft}
-      inputMode="numeric"
-      disabled={disabled}
-      placeholder="%"
-      aria-label="Commission percent"
-      onChange={(event) => setDraft(event.target.value.replace(/[^\d]/g, "").slice(0, 3))}
-      onFocus={() => setFocused(true)}
-      onBlur={() => {
-        setFocused(false);
-        save();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") event.currentTarget.blur();
-      }}
-      className="h-8 w-14 rounded-lg border border-white/15 bg-ink px-1 text-center text-xs font-bold text-white outline-none"
-    />
+    <div className="flex items-center gap-1.5">
+      <input
+        value={draft}
+        inputMode="numeric"
+        disabled={disabled}
+        placeholder="%"
+        aria-label="Commission percent"
+        onChange={(event) => setDraft(event.target.value.replace(/[^\d]/g, "").slice(0, 3))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") save();
+        }}
+        className="h-7 w-12 rounded-lg border border-white/15 bg-ink px-1 text-center text-xs font-bold text-white outline-none"
+      />
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={save}
+        className="h-6 shrink-0 rounded-md bg-red px-1.5 text-[10px] font-extrabold leading-none text-white disabled:opacity-60"
+      >
+        {saved ? "SAVED" : "SAVE"}
+      </button>
+    </div>
   );
 }
+
+const partnerCols =
+  "desk-row grid-cols-[minmax(0,1.2fr)_6rem_7rem_minmax(0,1.2fr)_9.5rem_8.5rem_8rem]";
 
 function TransactionHistory({
   payments,

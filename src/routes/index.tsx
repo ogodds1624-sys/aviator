@@ -61,9 +61,10 @@ function Home() {
     const id = window.setTimeout(() => {
       void (async () => {
         const link = await getSportyLink();
-        void navigate({
-          to: link.linked ? (sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages") : "/connect",
-        });
+        const picked = link.country === "Nigeria" ? "Nigeria" : "Ghana";
+        if (sessionLeft() > 0) void navigate({ to: "/session" });
+        else if (picked === "Nigeria") void navigate({ to: "/nigeria-pay" });
+        else void navigate({ to: "/packages", search: { stay: 1 } });
       })();
     }, 3000);
     return () => window.clearTimeout(id);
@@ -72,14 +73,12 @@ function Home() {
   useEffect(() => {
     if (!signalOpen || isPending) return;
     const id = window.setTimeout(() => {
-      if (signedIn && linked) {
+      if (signedIn) {
         void navigate({
           to: country === "Nigeria" ? "/nigeria-pay" : "/packages",
           search: country === "Nigeria" ? {} : { stay: 1 },
           viewTransition: true,
         });
-      } else if (signedIn) {
-        void navigate({ to: "/connect", viewTransition: true });
       } else {
         void navigate({ to: "/login", viewTransition: true });
       }
@@ -90,6 +89,12 @@ function Home() {
   useEffect(() => {
     if (ref) window.localStorage.setItem("aviator-ref", ref);
   }, [ref]);
+
+  // The SportyBet form is only for the registration step that just set this flag.
+  // Reaching the site again closes that step, so later visits are not sent back.
+  useEffect(() => {
+    window.sessionStorage.removeItem("aviator-connect-once");
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((n) => n + 1), 3500);
@@ -102,10 +107,6 @@ function Home() {
       void navigate({ to: "/login", viewTransition: true });
       return;
     }
-    if (!linked) {
-      void navigate({ to: "/connect", viewTransition: true });
-      return;
-    }
     void navigate({
       to: country === "Nigeria" ? "/nigeria-pay" : "/packages",
       search: country === "Nigeria" ? {} : { stay: 1 },
@@ -115,12 +116,7 @@ function Home() {
 
   function runSignal() {
     if (loading || isPending) return;
-    if (signedIn) {
-      if (!linked) {
-        void navigate({ to: "/connect", viewTransition: true });
-        return;
-      }
-    } else {
+    if (!signedIn) {
       const known = window.localStorage.getItem("aviator-hack-email");
       void navigate({ to: known ? "/login" : "/register", viewTransition: true });
       return;

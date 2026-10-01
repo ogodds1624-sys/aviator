@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
-import { leaveUnlinked } from "@/lib/leave-unlinked";
+import { signOut } from "@/lib/auth/client";
 import { getSportyLink, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
 import { sessionLeft } from "@/lib/desk-session";
 import { rememberReferral } from "@/lib/remember-ref";
@@ -50,6 +50,7 @@ function ConnectPage() {
   const [phase, setPhase] = useState<"form" | "loading" | "done" | "leaving">("form");
   const [country, setCountry] = useState<"Ghana" | "Nigeria">("Ghana");
   const [signingOut, setSigningOut] = useState(false);
+  const [ready, setReady] = useState(false);
   const nigeria = country === "Nigeria";
 
   useEffect(() => {
@@ -58,12 +59,20 @@ function ConnectPage() {
   }, []);
 
   useEffect(() => {
+    const once = window.sessionStorage.getItem("aviator-connect-once") === "1";
     void getSportyLink().then((link) => {
       if (link.linked) {
+        window.sessionStorage.removeItem("aviator-connect-once");
         void navigate({
           to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
         });
+        return;
       }
+      if (!once) {
+        void navigate({ to: "/" });
+        return;
+      }
+      setReady(true);
     });
   }, [navigate]);
 
@@ -82,6 +91,7 @@ function ConnectPage() {
   useEffect(() => {
     if (phase !== "leaving") return;
     const id = window.setTimeout(() => {
+      window.sessionStorage.removeItem("aviator-connect-once");
       void navigate({ to: nigeria ? "/nigeria-pay" : "/packages" });
     }, 2000);
     return () => window.clearTimeout(id);
@@ -113,6 +123,14 @@ function ConnectPage() {
     }
     window.localStorage.setItem(STORAGE_KEY, digits);
     setPhase("loading");
+  }
+
+  if (!ready && phase === "form") {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
   }
 
   if (phase === "done" || phase === "leaving") {
@@ -192,7 +210,7 @@ function ConnectPage() {
             disabled={signingOut}
             onClick={() => {
               setSigningOut(true);
-              void leaveUnlinked().catch(() => setSigningOut(false));
+              void signOut("/").catch(() => setSigningOut(false));
             }}
             className="mt-4 h-11 w-full rounded-2xl border border-white/15 bg-ink text-sm font-extrabold text-white disabled:opacity-60"
           >

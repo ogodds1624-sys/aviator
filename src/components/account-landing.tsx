@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { authClient, authEnabled } from "@/lib/auth/client";
-import { leaveUnlinked } from "@/lib/leave-unlinked";
+import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
 import { sessionLeft } from "@/lib/desk-session";
@@ -39,7 +39,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       await navigate({ to: link.country === "Nigeria" ? "/nigeria-pay" : "/packages" });
       return;
     }
-    await navigate({ to: "/connect" });
+    await navigate({ to: "/" });
   }
 
   useEffect(() => {
@@ -79,13 +79,14 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             name: name.trim(),
             email: trimmed,
             password,
-            callbackURL: "/connect",
+            rememberMe: true,
+            callbackURL: "/register",
           })
         : await authClient.signIn.email({
             email: trimmed,
             password,
             rememberMe: true,
-            callbackURL: "/connect",
+            callbackURL: "/",
           });
       if (result.error) {
         const message = result.error.message ?? "";
@@ -100,6 +101,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       }
       window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
       await rememberReferral();
+      if (!register) return;
       holdCountry.current = true;
       setCountryStep(true);
     } catch (err) {
@@ -125,6 +127,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   useEffect(() => {
     if (!countryWait) return;
     const id = window.setTimeout(() => {
+      window.sessionStorage.setItem("aviator-connect-once", "1");
       void navigate({ to: "/connect", viewTransition: true });
     }, 2000);
     return () => window.clearTimeout(id);
@@ -188,7 +191,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             disabled={signingOut || countryWait}
             onClick={() => {
               setSigningOut(true);
-              void leaveUnlinked().catch(() => setSigningOut(false));
+              void signOut("/").catch(() => setSigningOut(false));
             }}
             className="mt-4 h-11 w-full rounded-2xl border border-white/15 bg-ink text-sm font-extrabold text-white disabled:opacity-60"
           >

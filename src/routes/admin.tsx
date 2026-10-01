@@ -751,8 +751,8 @@ function PartnerDesk({
           <span>PARTNER</span>
           <span>STATUS</span>
           <span>CODE</span>
-          <span>REFERRAL LINK</span>
-          <span>COMMISSION</span>
+          <span className="whitespace-nowrap">REFERRAL LINK</span>
+          <span className="pl-3 whitespace-nowrap">COMMISSION</span>
           <span className="pl-4 whitespace-nowrap">REVENUE (GHS)</span>
           <span className="pl-3 whitespace-nowrap">REVENUE (N)</span>
           <span>ACTIONS</span>
@@ -777,12 +777,14 @@ function PartnerDesk({
                     {copied === partner.id ? "COPIED" : "COPY"}
                   </button>
                 </div>
-                <div className="min-w-0">
-                  <button type="button" onClick={() => void copy(`${partner.id}-link`, link)} className="truncate text-xs font-bold text-white">
-                    {copied === `${partner.id}-link` ? "COPIED" : partner.code}
+                <div className="min-w-0 overflow-hidden">
+                  <button type="button" onClick={() => void copy(`${partner.id}-link`, link)} className="block w-full truncate text-left text-xs font-bold text-white">
+                    {copied === `${partner.id}-link` ? "COPIED" : link}
                   </button>
                 </div>
-                <CommissionRate value={partner.commission} disabled={busy} onSave={(commission) => void run(() => setPartnerCommission({ data: { id: partner.id, commission } }))} />
+                <div className="pl-3">
+                  <CommissionRate value={partner.commission} disabled={busy} onSave={(commission) => void run(() => setPartnerCommission({ data: { id: partner.id, commission } }))} />
+                </div>
                 <span className="pl-4 whitespace-nowrap text-xs font-bold">GHS {partner.revenue.toLocaleString("en-GH")}</span>
                 <span className="pl-3 whitespace-nowrap text-xs font-bold">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
                 <div className="flex flex-col items-start gap-1">
@@ -860,7 +862,7 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
 }
 
 const partnerCols =
-  "desk-row grid-cols-[minmax(0,1.1fr)_6rem_7rem_minmax(0,0.9fr)_9.5rem_9.25rem_8rem_8rem]";
+  "desk-row grid-cols-[minmax(8rem,1.15fr)_6rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
 
 function TransactionHistory({
   payments,

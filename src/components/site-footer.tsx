@@ -11,19 +11,6 @@ const LINKS = [
   { to: "/register", label: "Join" },
 ] as const;
 
-const TESTIMONIES = [
-  { name: "Kwame Mensah", place: "Accra, Ghana", stars: 5, text: "The cash-out window showed before the plane climbed. I stopped guessing." },
-  { name: "Chinedu Okafor", place: "Lagos, Nigeria", stars: 5, text: "Signal was clear on my phone. I took the window and left the round." },
-  { name: "Ama Boateng", place: "Kumasi, Ghana", stars: 5, text: "Easy to follow. The desk told me when to wait and when to leave." },
-  { name: "Aisha Bello", place: "Abuja, Nigeria", stars: 4, text: "I use it in the evening. The live feed matches what I see on the round." },
-  { name: "Kofi Asante", place: "Tema, Ghana", stars: 5, text: "Joined from a friend's link. The session time was worth it." },
-  { name: "Ngozi Adeyemi", place: "Port Harcourt, Nigeria", stars: 5, text: "The predicted coefficient came up in time. No more late exits." },
-  { name: "Adwoa Owusu", place: "Accra, Ghana", stars: 5, text: "Clean and fast. I open the desk, read the signal, and play my round." },
-  { name: "Tunde Bakare", place: "Ibadan, Nigeria", stars: 4, text: "Stars from me because the cash-out call was early, not after the drop." },
-  { name: "Yaw Darko", place: "Cape Coast, Ghana", stars: 5, text: "I checked three rounds. The window lined up each time." },
-  { name: "Fatima Abdullahi", place: "Kano, Nigeria", stars: 5, text: "Simple to use on mobile. The signal is the part I come back for." },
-];
-
 export function SiteFooter() {
   const [live, setLive] = useState<{ name: string; place: string; text: string; stars: number }[]>([]);
   const [open, setOpen] = useState(false);
@@ -44,12 +31,25 @@ export function SiteFooter() {
   }, []);
 
   useEffect(() => {
-    void getApprovedTestimonies()
-      .then(setLive)
-      .catch(() => setLive([]));
+    let current = true;
+    const load = () => {
+      void getApprovedTestimonies()
+        .then((rows) => {
+          if (current) setLive(rows);
+        })
+        .catch(() => {
+          if (current) setLive([]);
+        });
+    };
+    load();
+    const id = window.setInterval(load, 3000);
+    return () => {
+      current = false;
+      window.clearInterval(id);
+    };
   }, []);
 
-  const stories = live.length > 0 ? live : TESTIMONIES;
+  const stories = live;
   const chat = whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent("Text us")}` : "";
 
   async function onSubmit(event: FormEvent) {
@@ -74,6 +74,9 @@ export function SiteFooter() {
     <div className="mt-12">
       <section className="overflow-hidden" aria-label="Testimonies">
         <h2 className="px-4 text-center text-xs font-extrabold tracking-[0.16em] text-gold">TESTIMONIES</h2>
+        {stories.length === 0 ? (
+          <p className="mt-4 px-4 text-center text-sm text-[#8b95a7]">Approved testimonies from the admin desk show here.</p>
+        ) : (
         <div className="testimony-track mt-4 flex w-max gap-3 px-4">
           {[...stories, ...stories].map((item, index) => (
             <article
@@ -87,6 +90,7 @@ export function SiteFooter() {
             </article>
           ))}
         </div>
+        )}
         <div className="mx-auto mt-4 w-full max-w-md px-4">
           <button
             type="button"
@@ -187,6 +191,13 @@ export function SiteFooter() {
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li>Desk and signal help</li>
             <li>Payment confirmation</li>
+            {store?.email ? (
+              <li>
+                <a href={`mailto:${store.email}`} className="font-semibold text-white no-underline">
+                  {store.email}
+                </a>
+              </li>
+            ) : null}
             <li>
               {chat ? (
                 <a href={chat} target="_blank" rel="noreferrer" className="font-semibold text-white no-underline">

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminpageRouteImport } from './routes/adminpage'
 import { Route as ConnectRouteImport } from './routes/connect'
+import { Route as CountryRouteImport } from './routes/country'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NigeriaPayRouteImport } from './routes/nigeria-pay'
 import { Route as PackagesRouteImport } from './routes/packages'
@@ -41,6 +42,11 @@ const AdminpageRoute = AdminpageRouteImport.update({
 const ConnectRoute = ConnectRouteImport.update({
   id: '/connect',
   path: '/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CountryRoute = CountryRouteImport.update({
+  id: '/country',
+  path: '/country',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/adminpage': typeof AdminpageRoute
   '/connect': typeof ConnectRoute
+  '/country': typeof CountryRoute
   '/login': typeof LoginRoute
   '/nigeria-pay': typeof NigeriaPayRoute
   '/packages': typeof PackagesRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/adminpage': typeof AdminpageRoute
   '/connect': typeof ConnectRoute
+  '/country': typeof CountryRoute
   '/login': typeof LoginRoute
   '/nigeria-pay': typeof NigeriaPayRoute
   '/packages': typeof PackagesRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/adminpage': typeof AdminpageRoute
   '/connect': typeof ConnectRoute
+  '/country': typeof CountryRoute
   '/login': typeof LoginRoute
   '/nigeria-pay': typeof NigeriaPayRoute
   '/packages': typeof PackagesRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/adminpage'
     | '/connect'
+    | '/country'
     | '/login'
     | '/nigeria-pay'
     | '/packages'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/adminpage'
     | '/connect'
+    | '/country'
     | '/login'
     | '/nigeria-pay'
     | '/packages'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/adminpage'
     | '/connect'
+    | '/country'
     | '/login'
     | '/nigeria-pay'
     | '/packages'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AdminpageRoute: typeof AdminpageRoute
   ConnectRoute: typeof ConnectRoute
+  CountryRoute: typeof CountryRoute
   LoginRoute: typeof LoginRoute
   NigeriaPayRoute: typeof NigeriaPayRoute
   PackagesRoute: typeof PackagesRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof ConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/country': {
+      id: '/country'
+      path: '/country'
+      fullPath: '/country'
+      preLoaderRoute: typeof CountryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AdminpageRoute: AdminpageRoute,
   ConnectRoute: ConnectRoute,
+  CountryRoute: CountryRoute,
   LoginRoute: LoginRoute,
   NigeriaPayRoute: NigeriaPayRoute,
   PackagesRoute: PackagesRoute,

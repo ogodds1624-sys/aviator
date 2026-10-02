@@ -7,6 +7,7 @@ import { getSportyLink, markAccountCompleted, savePlayerCountry, saveSportyLink 
 import { sportyNumberMatches } from "@/lib/onboarding-gate";
 import { clearPending, readPending } from "@/lib/pending-registration";
 import { rememberReferral } from "@/lib/remember-ref";
+import { openTask } from "@/lib/task-order";
 
 export const Route = createFileRoute("/connect")({
   component: ConnectPage,
@@ -59,31 +60,12 @@ function ConnectPage() {
     void (async () => {
       const link = await getSportyLink();
       if (stop) return;
-      if (link.linked) {
-        clearPending();
-        if (link.country === "Nigeria") {
-          void navigate({ to: "/nigeria-pay" });
-        } else {
-          void navigate({ to: "/packages", search: { stay: 1 } });
-        }
+      if (!link.signedIn || !link.country || link.linked) {
+        if (!link.signedIn) clearPending();
+        void openTask(navigate, link);
         return;
       }
-      if (!link.signedIn) {
-        clearPending();
-        void navigate({ to: "/register" });
-        return;
-      }
-      const pending = readPending();
-      const stored = window.localStorage.getItem("aviator-country");
-      const next =
-        pending?.country ??
-        link.country ??
-        (stored === "Nigeria" || stored === "Ghana" ? stored : null);
-      if (!next) {
-        void navigate({ to: "/register" });
-        return;
-      }
-      setCountry(next);
+      setCountry(link.country);
       setReady(true);
     })();
     return () => {
@@ -144,11 +126,7 @@ function ConnectPage() {
       setError("Finish SportyBet before opening packages.");
       return;
     }
-    if (link.country === "Nigeria") {
-      await navigate({ to: "/nigeria-pay" });
-      return;
-    }
-    await navigate({ to: "/packages", search: { stay: 1 } });
+    await openTask(navigate, link);
   }
 
   if (!ready) {
@@ -165,7 +143,7 @@ function ConnectPage() {
       {isTask3Done ? (
         <TaskSuccess
           title="Sporty account connected successfully"
-          message="Your SportyBet account is saved. Continue when you are ready to open packages."
+          message="SportyBet is saved. Continue to the package prices."
           ready={isTask3Done}
           onContinue={() => void continueToPackages()}
         />

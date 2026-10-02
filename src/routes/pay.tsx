@@ -7,6 +7,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
+import { openTask } from "@/lib/task-order";
 
 export const Route = createFileRoute("/pay")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -37,7 +38,7 @@ function PayPage() {
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
+        void openTask(navigate, link);
         return;
       }
       if (link.country === "Nigeria") {

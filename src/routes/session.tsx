@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PREDICTOR_URL, clearSession, readSession, sessionLeft } from "@/lib/desk-session";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { openTask } from "@/lib/task-order";
 
 export const Route = createFileRoute("/session")({
   component: SessionPage,
@@ -26,17 +27,11 @@ function SessionPage() {
           return;
         }
         void getSportyLink().then((link) => {
-          void navigate({
-            to: !link.linked
-              ? link.signedIn && link.country
-                ? "/connect"
-                : link.signedIn
-                  ? "/register"
-                  : "/"
-              : link.country === "Nigeria"
-                ? "/nigeria-pay"
-                : "/packages",
-          });
+          if (!link.signedIn) {
+            void navigate({ to: "/" });
+            return;
+          }
+          void openTask(navigate, link);
         });
         return;
       }

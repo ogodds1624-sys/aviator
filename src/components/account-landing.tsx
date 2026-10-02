@@ -5,10 +5,11 @@ import { SignalLoading } from "@/components/signal-loading";
 import { TaskSuccess } from "@/components/task-success";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
-import { clearPending, readPending, savePending } from "@/lib/pending-registration";
+import { getSportyLink } from "@/lib/admin-snapshot";
+import { clearPending, savePending } from "@/lib/pending-registration";
 import { peekRegistrationEmail } from "@/lib/registration-email";
 import { rememberReferral } from "@/lib/remember-ref";
+import { openTask } from "@/lib/task-order";
 
 type Mode = "register" | "login";
 
@@ -23,13 +24,10 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [countryStep, setCountryStep] = useState(false);
-  const [savingCountry, setSavingCountry] = useState(false);
   const [isTask1Done, setIsTask1Done] = useState(false);
-  const [isTask2Done, setIsTask2Done] = useState(false);
   const [taken, setTaken] = useState(false);
-  const holdCountry = useRef(false);
-  const stayOnRegister = useRef(false);
+  const holdTask1 = useRef(false);
+  const [stayOnRegister, setStayOnRegister] = useState(false);
   const register = mode === "register";
 
   async function continueAfterAccount() {
@@ -38,36 +36,28 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       link = await getSportyLink();
     }
-    if (link.linked) {
-      if (link.country === "Nigeria") {
-        await navigate({ to: "/nigeria-pay" });
-        return;
-      }
-      await navigate({ to: "/packages", search: { stay: 1 } });
+    if (!link.signedIn) {
+      window.sessionStorage.removeItem("aviator-register-connect");
+      await navigate({ to: "/" });
       return;
     }
-    if (link.signedIn && link.country) {
-      await navigate({ to: "/connect" });
-      return;
-    }
-    if (link.signedIn) {
-      holdCountry.current = true;
-      setCountryStep(true);
-      return;
-    }
-    window.sessionStorage.removeItem("aviator-register-connect");
-    await navigate({ to: "/" });
+    await openTask(navigate, link);
   }
 
   useEffect(() => {
-    if (holdCountry.current || countryStep || stayOnRegister.current || isTask1Done || isTask2Done) return;
+    if (window.sessionStorage.getItem("aviator-stay-register") === "1") {
+      window.sessionStorage.removeItem("aviator-stay-register");
+      setStayOnRegister(true);
+      return;
+    }
+    if (holdTask1.current || stayOnRegister || isTask1Done) return;
     if (!isPending && user && !user.isDevFallback) {
       void continueAfterAccount();
     }
-  }, [isPending, user, navigate, countryStep, isTask1Done, isTask2Done]);
+  }, [isPending, user, navigate, isTask1Done, stayOnRegister]);
 
   useEffect(() => {
-    if (!holdCountry.current) clearPending();
+    if (!holdTask1.current) clearPending();
     const saved = window.localStorage.getItem(REMEMBERED_EMAIL);
     if (saved && !register) setEmail(saved);
     if (!register && window.sessionStorage.getItem("aviator-email-taken") === "1") {
@@ -97,7 +87,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     }
     setBusy(true);
     if (register) {
-      holdCountry.current = true;
+      holdTask1.current = true;
       let lastError = "Could not save that account.";
       try {
         try {
@@ -108,7 +98,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               await continueAfterAccount();
               return;
             }
-            holdCountry.current = false;
+            holdTask1.current = false;
             window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
             window.sessionStorage.setItem("aviator-email-taken", "1");
             await navigate({ to: "/login" });
@@ -140,7 +130,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 link = await getSportyLink();
               }
               if (!link.signedIn) {
-                holdCountry.current = false;
+                holdTask1.current = false;
                 setError("Could not confirm that account.");
                 return;
               }
@@ -156,7 +146,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 await continueAfterAccount();
                 return;
               }
-              holdCountry.current = false;
+              holdTask1.current = false;
               window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
               window.sessionStorage.setItem("aviator-email-taken", "1");
               await navigate({ to: "/login" });
@@ -165,7 +155,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             lastError = message || failure.statusText?.trim() || "Could not save that account.";
             const status = failure.status ?? 0;
             if (message && status < 500) {
-              holdCountry.current = false;
+              holdTask1.current = false;
               setError(lastError);
               return;
             }
@@ -173,7 +163,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             lastError = err instanceof Error && err.message ? err.message : "Could not save that account.";
           }
         }
-        holdCountry.current = false;
+        holdTask1.current = false;
         setError(lastError);
       } finally {
         setBusy(false);
@@ -217,28 +207,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     }
   }
 
-  async function chooseCountry(country: "Ghana" | "Nigeria") {
-    if (savingCountry || isTask2Done) return;
-    setError(null);
-    setSavingCountry(true);
-    try {
-      await savePlayerCountry({ data: { country } });
-      const link = await getSportyLink();
-      if (link.country !== country) {
-        setError("Could not confirm that country.");
-        return;
-      }
-      const pending = readPending();
-      if (pending) savePending({ ...pending, country, completionStatus: false });
-      window.localStorage.setItem("aviator-country", country);
-      setIsTask2Done(true);
-    } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Could not save that country.");
-    } finally {
-      setSavingCountry(false);
-    }
-  }
-
   async function continueToCountry() {
     if (!isTask1Done) return;
     const link = await getSportyLink();
@@ -247,110 +215,13 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       setError("Sign in before choosing a country.");
       return;
     }
-    setCountryStep(true);
+    await navigate({ to: "/country" });
   }
 
-  async function continueToSporty() {
-    if (!isTask2Done) return;
-    const link = await getSportyLink();
-    if (!link.signedIn || (link.country !== "Ghana" && link.country !== "Nigeria")) {
-      setIsTask2Done(false);
-      setError("Choose Ghana or Nigeria before continuing.");
-      return;
-    }
-    await navigate({ to: "/connect" });
-  }
-
-  function backToRegistration() {
-    clearPending();
-    holdCountry.current = false;
-    stayOnRegister.current = true;
-    setSavingCountry(false);
-    setIsTask1Done(false);
-    setIsTask2Done(false);
-    setCountryStep(false);
-    setName("");
-    setEmail("");
-    setPassword("");
-    setError(null);
-  }
-
-  if (!countryStep && !isTask1Done && (isPending || (user && !user.isDevFallback && !stayOnRegister.current))) {
+  if (!isTask1Done && (isPending || (user && !user.isDevFallback && !stayOnRegister))) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
-      </main>
-    );
-  }
-
-  if (countryStep) {
-    return (
-      <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8">
-        <div className="plane-sky" aria-hidden>
-          <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
-          <div className="plane-sky-shade" />
-        </div>
-        {isTask2Done ? (
-          <TaskSuccess
-            title="Country saved"
-            message="Your country is saved. Continue when you are ready to connect SportyBet."
-            ready={isTask2Done}
-            onContinue={() => void continueToSporty()}
-          />
-        ) : (
-        <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
-          <button
-            type="button"
-            onClick={backToRegistration}
-            className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
-          >
-            ← BACK
-          </button>
-          <h1 className="text-center text-2xl font-black tracking-tight">Where are you playing from?</h1>
-          {error ? (
-            <p className="mt-3 text-center text-sm font-medium text-red" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <div className="mt-5 grid gap-3">
-            <button
-              type="button"
-              onClick={() => void chooseCountry("Ghana")}
-              disabled={savingCountry}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
-            >
-              <span className="inline-flex items-center gap-3">
-                <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
-                  <rect width="24" height="5.34" fill="#ce1126" />
-                  <rect y="5.33" width="24" height="5.34" fill="#fcd116" />
-                  <rect y="10.66" width="24" height="5.34" fill="#006b3f" />
-                  <polygon
-                    points="12,6.2 12.7,8.2 14.8,8.2 13.1,9.4 13.8,11.4 12,10.2 10.2,11.4 10.9,9.4 9.2,8.2 11.3,8.2"
-                    fill="#000"
-                  />
-                </svg>
-                Ghana
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => void chooseCountry("Nigeria")}
-              disabled={savingCountry}
-              style={{ animationDelay: "0.2s" }}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
-            >
-              <span className="inline-flex items-center gap-3">
-                <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
-                  <rect width="8" height="16" fill="#008751" />
-                  <rect x="8" width="8" height="16" fill="#fff" />
-                  <rect x="16" width="8" height="16" fill="#008751" />
-                </svg>
-                Nigeria
-              </span>
-            </button>
-          </div>
-        </section>
-        )}
       </main>
     );
   }
@@ -360,7 +231,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
         <TaskSuccess
           title="Account created"
-          message="Your account is saved. Continue when you are ready to choose a country."
+          message="Registration is saved. Continue to the country page."
           ready={isTask1Done}
           onContinue={() => void continueToCountry()}
         />

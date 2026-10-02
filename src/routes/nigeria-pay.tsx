@@ -7,6 +7,7 @@ import { useLiveStorefront } from "@/lib/storefront-live";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
+import { openTask } from "@/lib/task-order";
 
 export const Route = createFileRoute("/nigeria-pay")({
   component: NigeriaPayPage,
@@ -48,7 +49,7 @@ function NigeriaPayPage() {
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
+        void openTask(navigate, link);
         return;
       }
       if (link.country !== "Nigeria") {

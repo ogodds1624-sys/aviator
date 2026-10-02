@@ -6,6 +6,7 @@ import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { sessionLeft } from "@/lib/desk-session";
+import { openTask } from "@/lib/task-order";
 
 export const Route = createFileRoute("/packages")({
   validateSearch: (search: Record<string, unknown>): { rejected?: 1; stay?: 1 } => {
@@ -52,7 +53,7 @@ function PackagesPage() {
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
+        void openTask(navigate, link);
         return;
       }
       if (link.country === "Nigeria") {

@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { clearPending } from "@/lib/pending-registration";
+import { openTask } from "@/lib/task-order";
 import { useLiveStorefront } from "@/lib/storefront-live";
 
 export const Route = createFileRoute("/")({
@@ -40,16 +41,7 @@ function Home() {
       await navigate({ to: "/register" });
       return;
     }
-    const link = await getSportyLink();
-    if (!link.linked) {
-      await navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
-      return;
-    }
-    if (link.country === "Nigeria") {
-      await navigate({ to: "/nigeria-pay" });
-      return;
-    }
-    await navigate({ to: "/packages", search: { stay: 1 } });
+    await openTask(navigate, await getSportyLink());
   }
 
   useEffect(() => {

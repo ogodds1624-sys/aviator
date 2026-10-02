@@ -22,6 +22,8 @@ function CompletedSession() {
     let stop = false;
     void enforceCompletedAccount()
       .then((result) => {
+        const path = window.location.pathname;
+        if (path === "/register" || path === "/country" || path === "/connect") return;
         if (stop || result.completed || !result.stale || clearingIncomplete) return;
         clearingIncomplete = true;
         void signOut("/").catch(() => {

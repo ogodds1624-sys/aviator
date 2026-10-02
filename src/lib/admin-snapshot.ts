@@ -266,6 +266,27 @@ async function ensurePayments(sql: Sql) {
       )
     `;
     await sql`alter table testimonies add column if not exists place text not null default ''`;
+    const providedTestimonies = [
+      ["seed-gh-kwame", "Kwame Mensah", "Accra, Ghana", "The cash-out window was clear and I closed the round on time.", 5],
+      ["seed-ng-chinedu", "Chinedu Okafor", "Lagos, Nigeria", "The predicted window showed before the climb, so I cashed out calmly.", 5],
+      ["seed-gh-ama", "Ama Serwaa", "Kumasi, Ghana", "I check the desk before every session. The signal is easy to follow.", 5],
+      ["seed-ng-amina", "Amina Bello", "Abuja, Nigeria", "Clear signals, and support answered when I asked about my session.", 4],
+      ["seed-gh-kofi", "Kofi Asante", "Tema, Ghana", "Session time matched the package I bought. Smooth from start to finish.", 5],
+      ["seed-ng-tunde", "Tunde Adeyemi", "Ibadan, Nigeria", "I bought session time and used it the same day. The desk stayed live.", 5],
+      ["seed-gh-akosua", "Akosua Boateng", "Takoradi, Ghana", "I waited for the safer window and it lined up. Very useful on my phone.", 4],
+      ["seed-ng-ngozi", "Ngozi Eze", "Enugu, Nigeria", "The rounds are easier to follow now. I come back to the desk every evening.", 5],
+      ["seed-gh-yaw", "Yaw Owusu", "Tamale, Ghana", "Simple to use on my phone. The live round felt easier to read.", 5],
+      ["seed-ng-ibrahim", "Ibrahim Musa", "Kano, Nigeria", "I open the desk, watch the window, and play only when it looks right.", 5],
+    ] as const;
+    for (let index = 0; index < providedTestimonies.length; index += 1) {
+      const [id, name, place, body, stars] = providedTestimonies[index];
+      const minutesAgo = providedTestimonies.length - index;
+      await sql`
+        insert into testimonies (id, name, place, body, stars, status, created_at)
+        values (${id}, ${name}, ${place}, ${body}, ${stars}, 'approved', now() - (${minutesAgo} * interval '1 minute'))
+        on conflict (id) do nothing
+      `;
+    }
     await sql`
       update gateway_settings
       set scans_remaining = 0,

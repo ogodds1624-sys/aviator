@@ -153,6 +153,8 @@ const database = databaseUrl
       connectionString: databaseUrl,
       max: 3,
       connectionTimeoutMillis: 8000,
+      query_timeout: 8000,
+      statement_timeout: 8000,
       ssl: /localhost|127\.0\.0\.1/.test(databaseUrl) ? undefined : { rejectUnauthorized: false },
     })
   : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };

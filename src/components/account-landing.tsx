@@ -72,40 +72,57 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       return;
     }
     setBusy(true);
+    const trimmed = email.trim();
+    let lastError = "Could not save that account.";
     try {
-      const trimmed = email.trim();
-      const result = register
-        ? await authClient.signUp.email({
-            name: name.trim(),
-            email: trimmed,
-            password,
-            rememberMe: true,
-            callbackURL: "/register",
-          })
-        : await authClient.signIn.email({
-            email: trimmed,
-            password,
-            rememberMe: true,
-            callbackURL: "/",
-          });
-      if (result.error) {
-        const message = result.error.message ?? "";
-        if (register && /exist|already|registered|duplicate/i.test(message)) {
-          window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
-          window.sessionStorage.setItem("aviator-email-taken", "1");
-          await navigate({ to: "/login" });
-          return;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const result = register
+            ? await authClient.signUp.email({
+                name: name.trim(),
+                email: trimmed,
+                password,
+                rememberMe: true,
+                callbackURL: "/register",
+              })
+            : await authClient.signIn.email({
+                email: trimmed,
+                password,
+                rememberMe: true,
+                callbackURL: "/",
+              });
+          if (!result.error) {
+            window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
+            try {
+              await rememberReferral();
+            } catch {
+              // The account is already stored. A referral note must not undo that.
+            }
+            if (!register) return;
+            holdCountry.current = true;
+            setCountryStep(true);
+            return;
+          }
+          const failure = result.error as { message?: string; code?: string; status?: number; statusText?: string };
+          const message = failure.message?.trim() || "";
+          const code = failure.code ?? "";
+          if (register && /exist|already|registered|duplicate/i.test(`${message} ${code}`)) {
+            window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
+            window.sessionStorage.setItem("aviator-email-taken", "1");
+            await navigate({ to: "/login" });
+            return;
+          }
+          lastError = message || failure.statusText?.trim() || "Could not save that account.";
+          const status = failure.status ?? 0;
+          if (message && status < 500) {
+            setError(lastError);
+            return;
+          }
+        } catch (err) {
+          lastError = err instanceof Error && err.message ? err.message : "Could not save that account.";
         }
-        setError(message || "Could not save that account.");
-        return;
       }
-      window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
-      await rememberReferral();
-      if (!register) return;
-      holdCountry.current = true;
-      setCountryStep(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save that account.");
+      setError(lastError);
     } finally {
       setBusy(false);
     }

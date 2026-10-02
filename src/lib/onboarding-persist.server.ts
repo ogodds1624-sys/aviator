@@ -56,14 +56,27 @@ export async function persistOnboarding(gate: OnboardingAcceptance) {
     returning u.id
   `;
   if (!marked[0]?.id) throw new Error("ONBOARDING_INCOMPLETE");
+  const { retainRegisteredProfile } = await import("@/lib/admin-snapshot");
+  const retained = await retainRegisteredProfile(sql, id);
+  if (!retained) throw new Error("ONBOARDING_INCOMPLETE");
 }
 
 export async function rollbackOnboarding(email: string) {
   const sql = await sqlClient();
   await ensureProfileTables(sql);
-  const rows = await sql<{ id: string }>`select id from "user" where lower(email) = ${email.toLowerCase()} limit 1`;
+  const rows = await sql<{ id: string; completed: boolean }>`
+    select id, "isCompleted" as completed from "user" where lower(email) = ${email.toLowerCase()} limit 1
+  `;
   const id = rows[0]?.id;
   if (!id) return;
+  const flag = rows[0]?.completed as unknown;
+  if (flag === true || flag === "t" || flag === "true" || flag === 1) return;
+  try {
+    const kept = await sql<{ user_id: string }>`select user_id from registered_users where user_id = ${id} limit 1`;
+    if (kept.length > 0) return;
+  } catch {
+    // The permanent table is created with the package profile. A missing table means this account was never registered.
+  }
   await sql`delete from sporty_accounts where user_id = ${id}`;
   await sql`delete from player_country where user_id = ${id}`;
   await sql`

@@ -277,6 +277,45 @@ async function ensurePayments(sql: Sql) {
         country text not null
       )
     `;
+    await sql`
+      create table if not exists registered_users (
+        user_id text primary key,
+        name text not null,
+        email text not null,
+        country text not null,
+        sporty_number text not null,
+        password_hash text,
+        registered_at timestamptz not null default now()
+      )
+    `;
+    await sql`
+      insert into registered_users (user_id, name, email, country, sporty_number, password_hash, registered_at)
+      select u.id,
+        u.name,
+        u.email,
+        c.country,
+        s.number,
+        (
+          select a.password
+          from "account" a
+          where a."userId" = u.id and a.password is not null
+          order by case when a."providerId" = 'credential' then 0 else 1 end
+          limit 1
+        ),
+        coalesce(s.linked_at, u."createdAt", now())
+      from "user" u
+      join player_country c on c.user_id = u.id
+      join sporty_accounts s on s.user_id = u.id
+      where c.country in ('Ghana', 'Nigeria')
+      on conflict (user_id) do update
+      set password_hash = coalesce(registered_users.password_hash, excluded.password_hash)
+    `;
+    await sql`
+      update "user" u
+      set "isCompleted" = true
+      where exists (select 1 from registered_users r where r.user_id = u.id)
+        and u."isCompleted" is not true
+    `;
   })().catch((error) => {
     schemaPromise = null;
     throw error;
@@ -287,10 +326,9 @@ async function ensurePayments(sql: Sql) {
 async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   await ensurePayments(sql);
   const rows = await sql<{ id: string; name: string; email: string; createdAt: string | Date }>`
-    select u.id, u.name, u.email, coalesce(s.linked_at, u."createdAt") as "createdAt"
-    from sporty_accounts s
-    join "user" u on u.id = s.user_id
-    order by coalesce(s.linked_at, u."createdAt") desc
+    select user_id as id, name, email, registered_at as "createdAt"
+    from registered_users
+    order by registered_at desc
   `;
   const referralRows = await sql<{ user_id: string; referred_by: string }>`
     select user_id, referred_by from referrals
@@ -724,6 +762,68 @@ export const saveReferral = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Copies package-page credentials once. password_hash is the existing account hash and is never returned. */
+export async function retainRegisteredProfile(sql: Sql, userId: string) {
+  await ensurePayments(sql);
+  await sql`
+    insert into player_country (user_id, country)
+    select user_id, country from registered_users
+    where user_id = ${userId} and country in ('Ghana', 'Nigeria')
+    on conflict (user_id) do nothing
+  `;
+  await sql`
+    insert into sporty_accounts (user_id, number, linked_at)
+    select user_id, sporty_number, registered_at from registered_users
+    where user_id = ${userId}
+    on conflict (user_id) do nothing
+  `;
+  const rows = await sql<{
+    id: string;
+    name: string;
+    email: string;
+    country: string;
+    sporty_number: string;
+    password_hash: string | null;
+    registered_at: string | Date | null;
+  }>`
+    select u.id, u.name, u.email, c.country, s.number as sporty_number,
+      (
+        select a.password from "account" a
+        where a."userId" = u.id and a.password is not null
+        order by case when a."providerId" = 'credential' then 0 else 1 end
+        limit 1
+      ) as password_hash,
+      coalesce(s.linked_at, u."createdAt") as registered_at
+    from "user" u
+    join player_country c on c.user_id = u.id
+    join sporty_accounts s on s.user_id = u.id
+    where u.id = ${userId}
+      and c.country in ('Ghana', 'Nigeria')
+    limit 1
+  `;
+  const row = rows[0];
+  if (!row?.id) return false;
+  await sql`
+    update "user" set "isCompleted" = true
+    where id = ${row.id} and "isCompleted" is not true
+  `;
+  await sql`
+    insert into registered_users (user_id, name, email, country, sporty_number, password_hash, registered_at)
+    values (
+      ${row.id},
+      ${row.name},
+      ${row.email},
+      ${row.country},
+      ${row.sporty_number},
+      ${row.password_hash},
+      ${row.registered_at ?? new Date().toISOString()}
+    )
+    on conflict (user_id) do update
+    set password_hash = coalesce(registered_users.password_hash, excluded.password_hash)
+  `;
+  return true;
+}
+
 export const getSportyLink = createServerFn({ method: "GET" }).handler(async () => {
   const { getSql } = await import("@/lib/db");
   const { getSessionUser } = await import("@/lib/auth/verify.server");
@@ -733,15 +833,15 @@ export const getSportyLink = createServerFn({ method: "GET" }).handler(async () 
   }
   const sql = await getSql();
   await ensurePayments(sql);
-  const linkedRows = await sql<{ user_id: string }>`select user_id from sporty_accounts where user_id = ${user.id}`;
+  const retained = await retainRegisteredProfile(sql, user.id);
   const countryRows = await sql<{ country: string }>`select country from player_country where user_id = ${user.id}`;
   const country = countryRows[0]?.country === "Nigeria" ? "Nigeria" : countryRows[0]?.country === "Ghana" ? "Ghana" : null;
   const completedRows = await sql<{ completed: boolean }>`
     select "isCompleted" as completed from "user" where id = ${user.id} limit 1
   `;
   const flag = completedRows[0]?.completed as unknown;
-  const completed = flag === true || flag === "t" || flag === "true" || flag === 1;
-  const linked = linkedRows.length > 0 && completed;
+  const completed = retained || flag === true || flag === "t" || flag === "true" || flag === 1;
+  const linked = retained;
   return { linked, country, locked: linked && country != null, signedIn: true, completed };
 });
 
@@ -777,8 +877,15 @@ export const abandonUnlinkedAccount = createServerFn({ method: "POST" }).handler
   if (!user || user.id === "dev-user") return { removed: false };
   const sql = await getSql();
   await ensurePayments(sql);
+  const kept = await sql<{ user_id: string }>`select user_id from registered_users where user_id = ${user.id} limit 1`;
+  if (kept.length > 0) return { removed: false };
   const linked = await sql<{ user_id: string }>`select user_id from sporty_accounts where user_id = ${user.id}`;
   if (linked.length > 0) return { removed: false };
+  const completedRows = await sql<{ completed: boolean }>`
+    select "isCompleted" as completed from "user" where id = ${user.id} limit 1
+  `;
+  const flag = completedRows[0]?.completed as unknown;
+  if (flag === true || flag === "t" || flag === "true" || flag === 1) return { removed: false };
   await sql`delete from referrals where user_id = ${user.id}`;
   await sql`delete from player_country where user_id = ${user.id}`;
   await sql`delete from "user" where id = ${user.id}`;
@@ -826,18 +933,8 @@ export const markAccountCompleted = createServerFn({ method: "POST" }).handler(a
   if (!user) throw new Error("Sign in before linking SportyBet.");
   const sql = await getSql();
   await ensurePayments(sql);
-  const marked = await sql<{ id: string }>`
-    update "user" u
-    set "isCompleted" = true
-    where u.id = ${user.id}
-      and exists (select 1 from sporty_accounts s where s.user_id = u.id)
-      and exists (
-        select 1 from player_country c
-        where c.user_id = u.id and c.country in ('Ghana', 'Nigeria')
-      )
-    returning u.id
-  `;
-  if (!marked[0]?.id) throw new Error("Finish country and SportyBet before opening packages.");
+  const retained = await retainRegisteredProfile(sql, user.id);
+  if (!retained) throw new Error("Finish country and SportyBet before opening packages.");
   return { isCompleted: true };
 });
 
@@ -1040,7 +1137,7 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
     const commission = Number(partner.commission) || 0;
     const memberRows = await sql<{ total: number | string }>`
       select count(*) as total from referrals r
-      join sporty_accounts s on s.user_id = r.user_id
+      join registered_users reg on reg.user_id = r.user_id
       where lower(r.referred_by) = ${code} or lower(r.referred_by) = ${name}
     `;
     const payments = await sql<{ amount: number | string; created_at: string | Date; user_id: string; country: string | null }>`
@@ -1100,13 +1197,11 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       bucket.set(row.user_id, (bucket.get(row.user_id) ?? 0) + amount);
     }
     const referred = await sql<{ name: string; email: string; joined: string | Date; user_id: string; country: string | null }>`
-      select u.name, u.email, coalesce(s.linked_at, u."createdAt") as joined, r.user_id, c.country
+      select reg.name, reg.email, reg.registered_at as joined, reg.user_id, reg.country
       from referrals r
-      join "user" u on u.id = r.user_id
-      join sporty_accounts s on s.user_id = r.user_id
-      left join player_country c on c.user_id = r.user_id
+      join registered_users reg on reg.user_id = r.user_id
       where lower(r.referred_by) = ${code} or lower(r.referred_by) = ${name}
-      order by coalesce(s.linked_at, u."createdAt") desc
+      order by reg.registered_at desc
     `;
     const referrals = referred.map((row) => {
       const joinedAt = row.joined instanceof Date ? row.joined : new Date(row.joined);

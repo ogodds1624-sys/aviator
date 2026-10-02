@@ -47,11 +47,13 @@ function PackagesPage() {
 
   useEffect(() => {
     if (isPending) return;
-    if (!user || user.isDevFallback) {
-      void navigate({ to: "/register" });
-      return;
-    }
+    let stop = false;
     void getSportyLink().then((link) => {
+      if (stop) return;
+      if (!link.signedIn || user?.isDevFallback) {
+        void navigate({ to: "/register" });
+        return;
+      }
       if (!link.linked) {
         void openTask(navigate, link);
         return;
@@ -62,6 +64,9 @@ function PackagesPage() {
       }
       setReady(true);
     });
+    return () => {
+      stop = true;
+    };
   }, [isPending, user, navigate]);
 
   useEffect(() => {

@@ -42,7 +42,6 @@ function PackagesPage() {
   const { user, isPending } = useCurrentUserState();
   const { rejected, stay } = Route.useSearch();
   const [ready, setReady] = useState(false);
-  const [pending, setPending] = useState<number | null>(null);
   const store = useLiveStorefront();
   const [alertOn, setAlertOn] = useState(Boolean(rejected));
 
@@ -81,15 +80,6 @@ function PackagesPage() {
     if (sessionLeft() > 0) void navigate({ to: "/session", viewTransition: true });
   }, [navigate, stay]);
 
-  useEffect(() => {
-    if (pending == null) return;
-    const amount = pending;
-    const id = window.setTimeout(() => {
-      void navigate({ to: "/pay", search: { amount } });
-    }, 2000);
-    return () => window.clearTimeout(id);
-  }, [pending, navigate]);
-
   if (!ready) {
     return (
       <main className="grid min-h-dvh place-items-center bg-ink">
@@ -101,7 +91,6 @@ function PackagesPage() {
   return (
     <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
       <PlaneSky />
-      {pending != null ? <SignalLoading /> : null}
       <div className="relative z-10 mx-auto w-full max-w-md">
         {alertOn ? (
           <div className="reject-banner mb-5 rounded-2xl border border-red bg-black/75 px-4 py-4 text-center" role="alert">
@@ -151,8 +140,7 @@ function PackagesPage() {
                 <p className="mt-4 text-lg font-semibold text-white">{pack.detail}</p>
                 <button
                   type="button"
-                  disabled={pending != null}
-                  onClick={() => setPending(pack.price)}
+                  onClick={() => void navigate({ to: "/pay", search: { amount: pack.price } })}
                   style={{ animationDelay: `${index * 0.2}s` }}
                   className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                 >

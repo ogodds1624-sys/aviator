@@ -67,12 +67,6 @@ function NigeriaPayPage() {
   }, [isPending, user, navigate]);
 
   useEffect(() => {
-    if (amount == null || showPay) return;
-    const id = window.setTimeout(() => setShowPay(true), 2000);
-    return () => window.clearTimeout(id);
-  }, [amount, showPay]);
-
-  useEffect(() => {
     if (!paymentId || result !== "pending") return;
     const timer = window.setInterval(() => {
       void getPaymentStatus({ data: { id: paymentId } }).then((row) => {
@@ -181,7 +175,6 @@ function NigeriaPayPage() {
     return (
       <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
         <PlaneSky />
-        {amount != null ? <SignalLoading /> : null}
         <div className="relative z-10 mx-auto w-full max-w-md">
           {alertOn ? (
             <div className="reject-banner mb-5 rounded-2xl border border-red bg-black/75 px-4 py-4 text-center" role="alert">
@@ -221,8 +214,10 @@ function NigeriaPayPage() {
                   <p className="mt-4 text-lg font-semibold text-white">{pack.detail}</p>
                   <button
                     type="button"
-                    disabled={amount != null}
-                    onClick={() => setAmount(pack.price)}
+                    onClick={() => {
+                      setAmount(pack.price);
+                      setShowPay(true);
+                    }}
                     style={{ animationDelay: `${index * 0.2}s` }}
                     className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                   >

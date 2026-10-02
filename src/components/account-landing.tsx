@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
+import { TaskSuccess } from "@/components/task-success";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
-import { clearPending, readPending, savePending, armConnectHandoff } from "@/lib/pending-registration";
+import { clearPending, readPending, savePending } from "@/lib/pending-registration";
 import { peekRegistrationEmail } from "@/lib/registration-email";
 import { rememberReferral } from "@/lib/remember-ref";
 
@@ -23,11 +24,12 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [countryStep, setCountryStep] = useState(false);
-  const [countryWait, setCountryWait] = useState(false);
+  const [savingCountry, setSavingCountry] = useState(false);
+  const [isTask1Done, setIsTask1Done] = useState(false);
+  const [isTask2Done, setIsTask2Done] = useState(false);
   const [taken, setTaken] = useState(false);
   const holdCountry = useRef(false);
   const stayOnRegister = useRef(false);
-  const pickedCountry = useRef<"Ghana" | "Nigeria" | null>(null);
   const register = mode === "register";
 
   async function continueAfterAccount() {
@@ -58,11 +60,11 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   }
 
   useEffect(() => {
-    if (holdCountry.current || countryStep || stayOnRegister.current) return;
+    if (holdCountry.current || countryStep || stayOnRegister.current || isTask1Done || isTask2Done) return;
     if (!isPending && user && !user.isDevFallback) {
       void continueAfterAccount();
     }
-  }, [isPending, user, navigate, countryStep]);
+  }, [isPending, user, navigate, countryStep, isTask1Done, isTask2Done]);
 
   useEffect(() => {
     if (!holdCountry.current) clearPending();
@@ -132,7 +134,17 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 country: null,
                 completionStatus: false,
               });
-              setCountryStep(true);
+              let link = await getSportyLink();
+              for (let check = 0; check < 3 && !link.signedIn; check += 1) {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                link = await getSportyLink();
+              }
+              if (!link.signedIn) {
+                holdCountry.current = false;
+                setError("Could not confirm that account.");
+                return;
+              }
+              setIsTask1Done(true);
               return;
             }
             const failure = result.error as { message?: string; code?: string; status?: number; statusText?: string };
@@ -206,40 +218,56 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   }
 
   async function chooseCountry(country: "Ghana" | "Nigeria") {
-    if (countryWait) return;
+    if (savingCountry || isTask2Done) return;
     setError(null);
+    setSavingCountry(true);
     try {
       await savePlayerCountry({ data: { country } });
-    } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Could not save that country.");
-      return;
-    }
-    const pending = readPending();
-    if (pending) savePending({ ...pending, country, completionStatus: false });
-    window.localStorage.setItem("aviator-country", country);
-    pickedCountry.current = country;
-    setCountryWait(true);
-  }
-
-  useEffect(() => {
-    if (!countryWait) return;
-    const id = window.setTimeout(() => {
-      if (!pickedCountry.current) {
-        setCountryWait(false);
+      const link = await getSportyLink();
+      if (link.country !== country) {
+        setError("Could not confirm that country.");
         return;
       }
-      armConnectHandoff();
-      void navigate({ to: "/connect", viewTransition: true });
-    }, 2000);
-    return () => window.clearTimeout(id);
-  }, [countryWait, navigate]);
+      const pending = readPending();
+      if (pending) savePending({ ...pending, country, completionStatus: false });
+      window.localStorage.setItem("aviator-country", country);
+      setIsTask2Done(true);
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Could not save that country.");
+    } finally {
+      setSavingCountry(false);
+    }
+  }
+
+  async function continueToCountry() {
+    if (!isTask1Done) return;
+    const link = await getSportyLink();
+    if (!link.signedIn) {
+      setIsTask1Done(false);
+      setError("Sign in before choosing a country.");
+      return;
+    }
+    setCountryStep(true);
+  }
+
+  async function continueToSporty() {
+    if (!isTask2Done) return;
+    const link = await getSportyLink();
+    if (!link.signedIn || (link.country !== "Ghana" && link.country !== "Nigeria")) {
+      setIsTask2Done(false);
+      setError("Choose Ghana or Nigeria before continuing.");
+      return;
+    }
+    await navigate({ to: "/connect" });
+  }
 
   function backToRegistration() {
     clearPending();
-    pickedCountry.current = null;
     holdCountry.current = false;
     stayOnRegister.current = true;
-    setCountryWait(false);
+    setSavingCountry(false);
+    setIsTask1Done(false);
+    setIsTask2Done(false);
     setCountryStep(false);
     setName("");
     setEmail("");
@@ -247,7 +275,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     setError(null);
   }
 
-  if (!countryStep && (isPending || (user && !user.isDevFallback && !stayOnRegister.current))) {
+  if (!countryStep && !isTask1Done && (isPending || (user && !user.isDevFallback && !stayOnRegister.current))) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
@@ -262,7 +290,14 @@ export function AccountLanding({ mode }: { mode: Mode }) {
           <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
           <div className="plane-sky-shade" />
         </div>
-        {countryWait ? <SignalLoading /> : null}
+        {isTask2Done ? (
+          <TaskSuccess
+            title="Country saved"
+            message="Your country is saved. Continue when you are ready to connect SportyBet."
+            ready={isTask2Done}
+            onContinue={() => void continueToSporty()}
+          />
+        ) : (
         <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
           <button
             type="button"
@@ -281,7 +316,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             <button
               type="button"
               onClick={() => void chooseCountry("Ghana")}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white"
+              disabled={savingCountry}
+              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-3">
                 <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
@@ -299,8 +335,9 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             <button
               type="button"
               onClick={() => void chooseCountry("Nigeria")}
+              disabled={savingCountry}
               style={{ animationDelay: "0.2s" }}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white"
+              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-3">
                 <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
@@ -313,6 +350,20 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             </button>
           </div>
         </section>
+        )}
+      </main>
+    );
+  }
+
+  if (isTask1Done) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
+        <TaskSuccess
+          title="Account created"
+          message="Your account is saved. Continue when you are ready to choose a country."
+          ready={isTask1Done}
+          onContinue={() => void continueToCountry()}
+        />
       </main>
     );
   }

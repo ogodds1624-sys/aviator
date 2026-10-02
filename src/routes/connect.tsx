@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
+import { TaskSuccess } from "@/components/task-success";
 import { getSportyLink, markAccountCompleted, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
 import { sportyNumberMatches } from "@/lib/onboarding-gate";
 import { clearPending, readPending } from "@/lib/pending-registration";
@@ -48,6 +49,7 @@ function ConnectPage() {
   const [number, setNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isTask3Done, setIsTask3Done] = useState(false);
   const [country, setCountry] = useState<"Ghana" | "Nigeria">("Ghana");
   const [ready, setReady] = useState(false);
   const nigeria = country === "Nigeria";
@@ -111,6 +113,11 @@ function ConnectPage() {
       await savePlayerCountry({ data: { country } });
       await saveSportyLink({ data: { number: digits } });
       await markAccountCompleted();
+      const link = await getSportyLink();
+      if (!link.linked) {
+        setError("Could not confirm that SportyBet account.");
+        return;
+      }
       const pending = readPending();
       if (pending?.email) window.localStorage.setItem("aviator-hack-email", pending.email);
       window.localStorage.setItem("aviator-country", country);
@@ -121,16 +128,27 @@ function ConnectPage() {
       } catch {
         // The account is already stored. A referral note must not undo that.
       }
-      if (country === "Nigeria") {
-        await navigate({ to: "/nigeria-pay" });
-      } else {
-        await navigate({ to: "/packages", search: { stay: 1 } });
-      }
+      setIsTask3Done(true);
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Could not save that account.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function continueToPackages() {
+    if (!isTask3Done) return;
+    const link = await getSportyLink();
+    if (!link.linked) {
+      setIsTask3Done(false);
+      setError("Finish SportyBet before opening packages.");
+      return;
+    }
+    if (link.country === "Nigeria") {
+      await navigate({ to: "/nigeria-pay" });
+      return;
+    }
+    await navigate({ to: "/packages", search: { stay: 1 } });
   }
 
   if (!ready) {
@@ -144,6 +162,14 @@ function ConnectPage() {
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 text-white">
       <AviatorSky />
+      {isTask3Done ? (
+        <TaskSuccess
+          title="Sporty account connected successfully"
+          message="Your SportyBet account is saved. Continue when you are ready to open packages."
+          ready={isTask3Done}
+          onContinue={() => void continueToPackages()}
+        />
+      ) : (
       <section className="relative z-10 w-full max-w-md min-w-0 rounded-[28px] border border-white/10 bg-black/55 px-5 py-7">
         <button
           type="button"
@@ -193,6 +219,7 @@ function ConnectPage() {
             </button>
           </form>
       </section>
+      )}
     </main>
   );
 }

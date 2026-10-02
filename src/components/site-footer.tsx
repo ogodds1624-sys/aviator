@@ -7,8 +7,8 @@ import { useLiveStorefront } from "@/lib/storefront-live";
 const LINKS = [
   { to: "/", label: "Home" },
   { to: "/packages", label: "Packages" },
-  { to: "/login", label: "Sign in" },
-  { to: "/register", label: "Join" },
+  { to: "/login", label: "Sign In" },
+  { to: "/register", label: "Register" },
 ] as const;
 
 export function SiteFooter() {
@@ -20,16 +20,11 @@ export function SiteFooter() {
   const [stars, setStars] = useState(5);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [returning, setReturning] = useState(false);
   const { user, isPending } = useCurrentUserState();
   const [linked, setLinked] = useState(false);
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback && linked;
   const store = useLiveStorefront();
   const whatsapp = store?.whatsapp ?? "";
-
-  useEffect(() => {
-    setReturning(Boolean(window.localStorage.getItem("aviator-hack-email")));
-  }, [user]);
 
   useEffect(() => {
     if (isPending || !user || user.isDevFallback) {
@@ -193,7 +188,6 @@ export function SiteFooter() {
           <ul className="mt-3 space-y-2">
             {LINKS.filter((item) => {
               if (signedIn && (item.to === "/login" || item.to === "/register")) return false;
-              if (returning && item.to === "/register") return false;
               return true;
             }).map((item) => (
               <li key={item.to}>

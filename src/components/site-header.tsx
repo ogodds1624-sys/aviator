@@ -6,12 +6,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
-  const [returning, setReturning] = useState(false);
   const [linked, setLinked] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setReturning(Boolean(window.localStorage.getItem("aviator-hack-email")));
-  }, [user]);
 
   useEffect(() => {
     if (isPending || !user || user.isDevFallback) {
@@ -62,16 +57,14 @@ export function SiteHeader() {
               to="/login"
               className="inline-flex h-9 items-center justify-center rounded-full border border-white/30 px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
             >
-              Log In
+              Sign In
             </Link>
-            {returning ? null : (
-              <Link
-                to="/register"
-                className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
-              >
-                Sign Up
-              </Link>
-            )}
+            <Link
+              to="/register"
+              className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
+            >
+              Register
+            </Link>
           </>
         )}
       </div>

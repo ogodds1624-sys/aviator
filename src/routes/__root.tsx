@@ -1,6 +1,9 @@
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthProvider } from "@/lib/auth/provider";
+import { signOut } from "@/lib/auth/client";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { enforceCompletedAccount } from "@/lib/completed-account";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { SupportChat } from "@/components/support-chat";
 import appCss from "../styles.css?url";
@@ -8,6 +11,33 @@ import appCss from "../styles.css?url";
 const APP_NAME = "AVIATOR HACK";
 
 const PRESSABLE = "button, a, input, textarea, select, option, label, summary, [role='button'], [role='link']";
+
+let clearingIncomplete = false;
+
+function CompletedSession() {
+  const { user, isPending } = useCurrentUserState();
+
+  useEffect(() => {
+    if (isPending || user?.isDevFallback || clearingIncomplete) return;
+    let stop = false;
+    void enforceCompletedAccount()
+      .then((result) => {
+        if (stop || result.completed || !result.stale || clearingIncomplete) return;
+        clearingIncomplete = true;
+        void signOut("/").catch(() => {
+          window.location.href = "/";
+        });
+      })
+      .catch(() => {
+        // A failed check must not send a finished account away.
+      });
+    return () => {
+      stop = true;
+    };
+  }, [isPending, user]);
+
+  return null;
+}
 
 function TapBounce() {
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -99,6 +129,7 @@ export const Route = createRootRoute({
       <body>
         <PreviewHostBridge />
         <AuthProvider>
+          <CompletedSession />
           <TapBounce />
           <Outlet />
           <SupportChat />

@@ -44,6 +44,18 @@ export async function persistOnboarding(gate: OnboardingAcceptance) {
     values (${id}, ${gate.sportyNumber}, now())
     on conflict (user_id) do nothing
   `;
+  const marked = await sql<{ id: string }>`
+    update "user" u
+    set "isCompleted" = true
+    where u.id = ${id}
+      and exists (select 1 from sporty_accounts s where s.user_id = u.id)
+      and exists (
+        select 1 from player_country c
+        where c.user_id = u.id and c.country in ('Ghana', 'Nigeria')
+      )
+    returning u.id
+  `;
+  if (!marked[0]?.id) throw new Error("ONBOARDING_INCOMPLETE");
 }
 
 export async function rollbackOnboarding(email: string) {

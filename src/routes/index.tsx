@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Plane, Sparkles } from "lucide-react";
 import { AviatorBoard } from "@/components/aviator-board";
-import { SignalLoading } from "@/components/signal-loading";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { clearPending } from "@/lib/pending-registration";
-import { sessionLeft } from "@/lib/desk-session";
 import { useLiveStorefront } from "@/lib/storefront-live";
 
 export const Route = createFileRoute("/")({
@@ -34,72 +32,25 @@ function Home() {
   const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
-  const [linked, setLinked] = useState<boolean | null>(null);
-  const [accountCountry, setAccountCountry] = useState<"Ghana" | "Nigeria" | null>(null);
-  const registered = signedIn && linked === true;
-  const [loading, setLoading] = useState(false);
-  const [signalOpen, setSignalOpen] = useState(false);
   const [tick, setTick] = useState(0);
 
-  useEffect(() => {
+  async function openAccount() {
+    if (isPending) return;
     if (!signedIn) {
-      setLinked(false);
-      setAccountCountry(null);
+      await navigate({ to: "/register" });
       return;
     }
-    let stop = false;
-    setLinked(null);
-    void getSportyLink()
-      .then((link) => {
-        if (stop) return;
-        setLinked(link.linked);
-        setAccountCountry(link.country === "Nigeria" ? "Nigeria" : link.country === "Ghana" ? "Ghana" : null);
-      })
-      .catch(() => {
-        if (!stop) setLinked(false);
-      });
-    return () => {
-      stop = true;
-    };
-  }, [signedIn, user]);
-
-  async function openPaidDesk() {
     const link = await getSportyLink();
     if (!link.linked) {
-      setLoading(false);
-      setSignalOpen(false);
-      return;
-    }
-    if (sessionLeft() > 0) {
-      await navigate({ to: "/session" });
+      await navigate({ to: "/register" });
       return;
     }
     if (link.country === "Nigeria") {
-      await navigate({ to: "/nigeria-pay", viewTransition: true });
+      await navigate({ to: "/nigeria-pay" });
       return;
     }
-    await navigate({ to: "/packages", search: { stay: 1 }, viewTransition: true });
+    await navigate({ to: "/packages", search: { stay: 1 } });
   }
-
-  useEffect(() => {
-    if (!loading) return;
-    const id = window.setTimeout(() => {
-      void openPaidDesk();
-    }, 3000);
-    return () => window.clearTimeout(id);
-  }, [loading, navigate]);
-
-  useEffect(() => {
-    if (!signalOpen || isPending) return;
-    const id = window.setTimeout(() => {
-      if (!registered) {
-        setSignalOpen(false);
-        return;
-      }
-      void openPaidDesk();
-    }, 2000);
-    return () => window.clearTimeout(id);
-  }, [signalOpen, isPending, registered, navigate]);
 
   useEffect(() => {
     clearPending();
@@ -110,44 +61,15 @@ function Home() {
   }, [ref]);
 
   useEffect(() => {
-    if (!registered) return;
-    if (accountCountry === "Nigeria") {
-      void navigate({ to: "/nigeria-pay", replace: true });
-      return;
-    }
-    void navigate({ to: "/packages", search: { stay: 1 }, replace: true });
-  }, [registered, accountCountry, navigate]);
-
-  useEffect(() => {
     const id = window.setInterval(() => setTick((n) => n + 1), 3500);
     return () => window.clearInterval(id);
   }, []);
 
-  function openDesk() {
-    if (isPending) return;
-    if (!registered) return;
-    void openPaidDesk();
-  }
-
-  function runSignal() {
-    if (loading || isPending || !registered) return;
-    setLoading(true);
-  }
-
   const rows = [0, 1, 2].map((offset) => CALLS[(tick + offset) % CALLS.length]);
   const tape = [...CALLS, ...CALLS];
 
-  if (isPending || linked === null || registered) {
-    return (
-      <main className="grid min-h-dvh place-items-center bg-ink">
-        <SignalLoading />
-      </main>
-    );
-  }
-
   return (
     <div className="min-h-dvh bg-ink text-white">
-      {loading || signalOpen ? <SignalLoading /> : null}
       <SiteHeader />
       <div className="ticker-band bg-red py-2 text-sm font-extrabold">
         <div className="ticker-track flex w-max gap-8 whitespace-nowrap">
@@ -196,8 +118,7 @@ function Home() {
         <div className="hero-actions">
           <button
             type="button"
-            onClick={runSignal}
-            disabled={loading}
+            onClick={() => void openAccount()}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-red px-5 text-sm font-extrabold tracking-wide text-white"
           >
             GET STARTED
@@ -205,7 +126,7 @@ function Home() {
           </button>
           <button
             type="button"
-            onClick={openDesk}
+            onClick={() => void openAccount()}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 px-5 text-sm font-bold text-white"
           >
             See the desk
@@ -274,13 +195,10 @@ function Home() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                if (!isPending && !signalOpen && registered) setSignalOpen(true);
-              }}
-              disabled={signalOpen}
-              className="buy-pulse flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-gold disabled:opacity-70"
+              onClick={() => void openAccount()}
+              className="buy-pulse flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-gold"
             >
-              <span>HACK SIGNAL</span>
+              <span>Start Now</span>
             </button>
           </div>
         </article>

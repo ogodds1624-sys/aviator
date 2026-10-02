@@ -32,12 +32,12 @@ function PayPage() {
   useEffect(() => {
     if (isPending) return;
     if (!user || user.isDevFallback) {
-      setReady(true);
+      void navigate({ to: "/register" });
       return;
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: "/" });
+        void navigate({ to: "/register" });
         return;
       }
       if (link.country === "Nigeria") {

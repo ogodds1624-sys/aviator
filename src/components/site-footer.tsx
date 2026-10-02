@@ -76,7 +76,7 @@ export function SiteFooter() {
       setPlace("");
       setText("");
       setStars(5);
-      setNote("Sent. It will show after admin approves it.");
+      setNote("Testimony successfully sent.");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "Could not send your testimony.");
     } finally {

@@ -32,8 +32,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
 
   async function continueAfterAccount() {
     let link = await getSportyLink();
-    for (let attempt = 0; attempt < 3 && link.signedIn === false; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+    for (let attempt = 0; attempt < 8 && link.signedIn === false; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
       link = await getSportyLink();
     }
     if (!link.signedIn) {
@@ -115,7 +115,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               password,
               rememberMe: true,
             });
-            if (!result.error) {
+            const created = !result.error || Boolean((result as unknown as { data?: { user?: unknown } }).data?.user);
+            if (created) {
               window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
               savePending({
                 name: trimmedName,
@@ -124,16 +125,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 country: null,
                 completionStatus: false,
               });
-              let link = await getSportyLink();
-              for (let check = 0; check < 3 && !link.signedIn; check += 1) {
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                link = await getSportyLink();
-              }
-              if (!link.signedIn) {
-                holdTask1.current = false;
-                setError("Could not confirm that account.");
-                return;
-              }
               setIsTask1Done(true);
               return;
             }
@@ -209,12 +200,12 @@ export function AccountLanding({ mode }: { mode: Mode }) {
 
   async function continueToCountry() {
     if (!isTask1Done) return;
-    const link = await getSportyLink();
-    if (!link.signedIn) {
-      setIsTask1Done(false);
-      setError("Sign in before choosing a country.");
-      return;
+    let link = await getSportyLink();
+    for (let attempt = 0; attempt < 8 && !link.signedIn; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      link = await getSportyLink();
     }
+    if (!link.signedIn) return;
     await navigate({ to: "/country" });
   }
 

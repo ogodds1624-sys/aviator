@@ -1,5 +1,6 @@
 import { abandonUnlinkedAccount } from "@/lib/admin-snapshot";
 import { signOut } from "@/lib/auth/client";
+import { clearPending } from "@/lib/pending-registration";
 
 export async function leaveUnlinked() {
   try {
@@ -11,7 +12,7 @@ export async function leaveUnlinked() {
     window.localStorage.removeItem("aviator-hack-email");
     window.localStorage.removeItem("aviator-country");
     window.localStorage.removeItem("aviator-hack-sportybet");
-    window.sessionStorage.removeItem("aviator-register-connect");
+    clearPending();
   } catch {
     // Storage can be blocked in the preview iframe.
   }

@@ -2,9 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
-import { getSportyLink, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
-import { leaveUnlinked } from "@/lib/leave-unlinked";
+import { getSportyLink } from "@/lib/admin-snapshot";
+import { authClient } from "@/lib/auth/client";
 import { sessionLeft } from "@/lib/desk-session";
+import { sportyNumberMatches } from "@/lib/onboarding-gate";
+import { clearPending, connectHandoffActive, readPending } from "@/lib/pending-registration";
 import { rememberReferral } from "@/lib/remember-ref";
 
 export const Route = createFileRoute("/connect")({
@@ -47,40 +49,32 @@ function ConnectPage() {
   const navigate = useNavigate();
   const [number, setNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<"form" | "loading" | "done" | "leaving">("form");
   const [country, setCountry] = useState<"Ghana" | "Nigeria">("Ghana");
   const [ready, setReady] = useState(false);
   const nigeria = country === "Nigeria";
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("aviator-country");
-    if (saved === "Nigeria" || saved === "Ghana") setCountry(saved);
-  }, []);
-
-  useEffect(() => {
     let stop = false;
     void (async () => {
-      for (let attempt = 0; attempt < 4; attempt++) {
-        const link = await getSportyLink();
-        if (stop) return;
-        if (link.linked) {
-          window.sessionStorage.removeItem("aviator-register-connect");
-          void navigate({
-            to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
-          });
-          return;
-        }
-        const registering = window.sessionStorage.getItem("aviator-register-connect") === "1";
-        if (!registering) {
-          void navigate({ to: "/" });
-          return;
-        }
-        if (link.signedIn !== false || attempt === 3) {
-          setReady(true);
-          return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 300));
+      const link = await getSportyLink();
+      if (stop) return;
+      if (link.linked) {
+        clearPending();
+        void navigate({
+          to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
+        });
+        return;
       }
+      const pending = readPending();
+      if (connectHandoffActive() && pending?.country && pending.completionStatus === false) {
+        setCountry(pending.country);
+        setReady(true);
+        return;
+      }
+      clearPending();
+      void navigate({ to: link.signedIn ? "/" : "/register" });
     })();
     return () => {
       stop = true;
@@ -107,32 +101,89 @@ function ConnectPage() {
     return () => window.clearTimeout(id);
   }, [phase, navigate, nigeria]);
 
+  function abandonRegistration() {
+    clearPending();
+    void navigate({ to: "/register" });
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const pending = readPending();
     const digits = number.replace(/\D/g, "");
-    const ok = nigeria ? /^0\d{10}$/.test(digits) : /^0\d{9}$/.test(digits);
-    if (!ok) {
-      setError(nigeria ? "Enter an 11-digit SportyBet number, starting with 0." : "Enter a 10-digit SportyBet number, starting with 0.");
+    if (!connectHandoffActive() || !pending?.country || pending.completionStatus !== false) {
+      abandonRegistration();
+      return;
+    }
+    if (!sportyNumberMatches(pending.country, digits)) {
+      setError(
+        pending.country === "Nigeria"
+          ? "Enter an 11-digit SportyBet number, starting with 0."
+          : "Enter a 10-digit SportyBet number, starting with 0.",
+      );
       return;
     }
     setError(null);
-    const picked = window.localStorage.getItem("aviator-country");
-    const saved =
-      picked === "Nigeria" || picked === "Ghana" ? await savePlayerCountry({ data: { country: picked } }) : null;
-    if (saved?.locked) {
-      window.localStorage.setItem("aviator-country", saved.country);
-      void navigate({ to: saved.country === "Nigeria" ? "/nigeria-pay" : "/packages", viewTransition: true });
-      return;
-    }
+    setBusy(true);
+    const body = {
+      name: pending.name,
+      email: pending.email,
+      password: pending.password,
+      rememberMe: true,
+      country: pending.country,
+      sportyNumber: digits,
+      completionStatus: true as const,
+    };
+    let lastError = "Could not save that account.";
     try {
-      await rememberReferral();
-      await saveSportyLink({ data: { number: digits } });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not connect that account.");
-      return;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch("/api/auth/sign-up/email", {
+            method: "POST",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const payload = (await response.json().catch(() => null)) as { message?: string; code?: string } | null;
+          if (response.ok) {
+            clearPending();
+            window.localStorage.setItem("aviator-hack-email", pending.email);
+            window.localStorage.setItem("aviator-country", pending.country);
+            window.localStorage.setItem(STORAGE_KEY, digits);
+            try {
+              await authClient.getSession();
+            } catch {
+              // The session cookie is already set. The next page reads it.
+            }
+            try {
+              await rememberReferral();
+            } catch {
+              // The account is already stored. A referral note must not undo that.
+            }
+            setPhase("loading");
+            return;
+          }
+          const message = payload?.message?.trim() || "";
+          const code = payload?.code ?? "";
+          if (/exist|already|registered|duplicate/i.test(`${message} ${code}`)) {
+            clearPending();
+            window.localStorage.setItem("aviator-hack-email", pending.email);
+            window.sessionStorage.setItem("aviator-email-taken", "1");
+            await navigate({ to: "/login" });
+            return;
+          }
+          lastError = message || "Could not save that account.";
+          if (message && response.status < 500) {
+            setError(lastError);
+            return;
+          }
+        } catch (err) {
+          lastError = err instanceof Error && err.message ? err.message : lastError;
+        }
+      }
+      setError(lastError);
+    } finally {
+      setBusy(false);
     }
-    window.localStorage.setItem(STORAGE_KEY, digits);
-    setPhase("loading");
   }
 
   if (!ready && phase === "form") {
@@ -172,7 +223,7 @@ function ConnectPage() {
       <section className="relative z-10 w-full max-w-md min-w-0 rounded-[28px] border border-white/10 bg-black/55 px-5 py-7">
         <button
           type="button"
-          onClick={() => void leaveUnlinked()}
+          onClick={abandonRegistration}
           className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
         >
           ← BACK
@@ -210,9 +261,10 @@ function ConnectPage() {
             {error ? <p className="mt-3 text-sm text-red">{error}</p> : null}
             <button
               type="submit"
-              className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-lg font-bold text-white"
+              disabled={busy}
+              className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-lg font-bold text-white disabled:opacity-60"
             >
-              Connect account
+              {busy ? "Saving…" : "Connect account"}
               <ArrowRight className="size-5" aria-hidden />
             </button>
           </form>

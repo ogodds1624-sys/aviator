@@ -4,7 +4,9 @@ import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
+import { getSportyLink } from "@/lib/admin-snapshot";
+import { clearPending, readPending, savePending, armConnectHandoff } from "@/lib/pending-registration";
+import { peekRegistrationEmail } from "@/lib/registration-email";
 import { rememberReferral } from "@/lib/remember-ref";
 
 type Mode = "register" | "login";
@@ -53,15 +55,16 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   }, [isPending, user, navigate, countryStep]);
 
   useEffect(() => {
+    if (!holdCountry.current) clearPending();
     const saved = window.localStorage.getItem(REMEMBERED_EMAIL);
-    if (saved) setEmail(saved);
+    if (saved && !register) setEmail(saved);
     if (!register && window.sessionStorage.getItem("aviator-email-taken") === "1") {
       setTaken(true);
       window.sessionStorage.removeItem("aviator-email-taken");
     }
     const ref = new URLSearchParams(window.location.search).get("ref") || window.localStorage.getItem("aviator-ref");
     if (ref) window.localStorage.setItem("aviator-ref", ref);
-  }, []);
+  }, [register]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -74,25 +77,53 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       setError("Use at least 8 characters.");
       return;
     }
+    const trimmedName = name.trim();
+    const trimmed = email.trim().toLowerCase();
+    if (register && trimmedName.length < 2) {
+      setError("Enter your name.");
+      return;
+    }
     setBusy(true);
-    const trimmed = email.trim();
+    if (register) {
+      try {
+        try {
+          const existing = await peekRegistrationEmail({ data: { email: trimmed } });
+          if (existing.taken) {
+            window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
+            window.sessionStorage.setItem("aviator-email-taken", "1");
+            await navigate({ to: "/login" });
+            return;
+          }
+        } catch {
+          // A lookup failure must not create the account. The final step checks again.
+        }
+        const stored = savePending({
+          name: trimmedName,
+          email: trimmed,
+          password,
+          country: null,
+          completionStatus: false,
+        });
+        if (!stored) {
+          setError("Could not keep that registration. Start again.");
+          return;
+        }
+        holdCountry.current = true;
+        setCountryStep(true);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     let lastError = "Could not save that account.";
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const result = register
-            ? await authClient.signUp.email({
-                name: name.trim(),
-                email: trimmed,
-                password,
-                rememberMe: true,
-                callbackURL: "/register",
-              })
-            : await authClient.signIn.email({
-                email: trimmed,
-                password,
-                rememberMe: true,
-              });
+          const result = await authClient.signIn.email({
+            email: trimmed,
+            password,
+            rememberMe: true,
+          });
           if (!result.error) {
             window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
             try {
@@ -100,23 +131,11 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             } catch {
               // The account is already stored. A referral note must not undo that.
             }
-            if (!register) {
-              await continueAfterAccount();
-              return;
-            }
-            holdCountry.current = true;
-            setCountryStep(true);
+            await continueAfterAccount();
             return;
           }
           const failure = result.error as { message?: string; code?: string; status?: number; statusText?: string };
           const message = failure.message?.trim() || "";
-          const code = failure.code ?? "";
-          if (register && /exist|already|registered|duplicate/i.test(`${message} ${code}`)) {
-            window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
-            window.sessionStorage.setItem("aviator-email-taken", "1");
-            await navigate({ to: "/login" });
-            return;
-          }
           lastError = message || failure.statusText?.trim() || "Could not save that account.";
           const status = failure.status ?? 0;
           if (message && status < 500) {
@@ -133,14 +152,19 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     }
   }
 
-  async function chooseCountry(country: "Ghana" | "Nigeria") {
+  function chooseCountry(country: "Ghana" | "Nigeria") {
     if (countryWait) return;
-    await rememberReferral();
-    const saved = await savePlayerCountry({ data: { country } });
-    const locked = saved.country;
-    window.localStorage.setItem("aviator-country", locked);
-    if (saved.locked) {
-      await navigate({ to: locked === "Nigeria" ? "/nigeria-pay" : "/packages", viewTransition: true });
+    const pending = readPending();
+    if (!pending || pending.completionStatus !== false) {
+      clearPending();
+      holdCountry.current = false;
+      setCountryStep(false);
+      setError("Finish the registration form first.");
+      return;
+    }
+    const stored = savePending({ ...pending, country, completionStatus: false });
+    if (!stored) {
+      setError("Could not keep that registration. Start again.");
       return;
     }
     setCountryWait(true);
@@ -149,17 +173,30 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   useEffect(() => {
     if (!countryWait) return;
     const id = window.setTimeout(() => {
-      window.sessionStorage.setItem("aviator-register-connect", "1");
+      const pending = readPending();
+      if (!pending?.country || pending.completionStatus !== false) {
+        clearPending();
+        holdCountry.current = false;
+        setCountryWait(false);
+        setCountryStep(false);
+        return;
+      }
+      armConnectHandoff();
       void navigate({ to: "/connect", viewTransition: true });
     }, 2000);
     return () => window.clearTimeout(id);
   }, [countryWait, navigate]);
 
   function backToRegistration() {
+    clearPending();
     holdCountry.current = false;
     stayOnRegister.current = true;
     setCountryWait(false);
     setCountryStep(false);
+    setName("");
+    setEmail("");
+    setPassword("");
+    setError(null);
     void navigate({ to: "/register" });
   }
 

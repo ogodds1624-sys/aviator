@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink } from "@/lib/admin-snapshot";
+import { clearPending } from "@/lib/pending-registration";
 import { sessionLeft } from "@/lib/desk-session";
 import { useLiveStorefront } from "@/lib/storefront-live";
 
@@ -96,7 +97,7 @@ function Home() {
   }, [signalOpen, isPending, registered, navigate]);
 
   useEffect(() => {
-    window.sessionStorage.removeItem("aviator-register-connect");
+    clearPending();
   }, []);
 
   useEffect(() => {

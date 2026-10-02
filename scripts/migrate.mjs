@@ -26,9 +26,34 @@ if (!databaseUrl) {
   process.exit(0);
 }
 
+// Session mode on the Supabase pooler only has a few client slots. A deploy
+// that finds them full retries the same files on transaction mode (port 6543).
+function transactionPoolerUrl(connectionString) {
+  const at = connectionString.lastIndexOf("@");
+  if (at === -1) return connectionString;
+  const prefix = connectionString.slice(0, at + 1);
+  const rest = connectionString.slice(at + 1);
+  const slash = rest.search(/[/?]/);
+  const hostport = slash === -1 ? rest : rest.slice(0, slash);
+  const tail = slash === -1 ? "" : rest.slice(slash);
+  if (hostport.startsWith("[")) return connectionString;
+  const colon = hostport.lastIndexOf(":");
+  const host = colon === -1 ? hostport : hostport.slice(0, colon);
+  const port = colon === -1 ? "" : hostport.slice(colon + 1);
+  if (!/pooler\.supabase\.(com|co)$/i.test(host)) return connectionString;
+  if (port === "6543") return connectionString;
+  if (port !== "" && port !== "5432") return connectionString;
+  return `${prefix}${host}:6543${tail}`;
+}
+
+function poolIsFull(err) {
+  const message = String(err?.message || err || "");
+  return /EMAXCONNSESSION|max clients|too many clients|sorry, too many clients/i.test(message);
+}
+
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
 
-async function main() {
+async function applyMigrations(poolUrl) {
   let entries;
   try {
     entries = await readdir(migrationsDir);
@@ -43,11 +68,21 @@ async function main() {
   }
 
   const pool = new pg.Pool({
-    connectionString: databaseUrl,
+    connectionString: poolUrl,
     max: 1,
-    ssl: /localhost|127\.0\.0\.1/.test(databaseUrl) ? undefined : { rejectUnauthorized: false },
+    connectionTimeoutMillis: 8000,
+    ssl: /localhost|127\.0\.0\.1/.test(poolUrl) ? undefined : { rejectUnauthorized: false },
   });
-  const client = await pool.connect();
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (err) {
+    await pool.end();
+    const fallback = transactionPoolerUrl(poolUrl);
+    if (!poolIsFull(err) || fallback === poolUrl) throw err;
+    console.error("[migrate] session pool is full, retrying on the transaction pooler");
+    return applyMigrations(fallback);
+  }
   try {
     await client.query(
       "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())",
@@ -72,6 +107,14 @@ async function main() {
         } catch {
           // ROLLBACK fails when the connection died — keep the original error.
         }
+        const fallback = transactionPoolerUrl(poolUrl);
+        if (poolIsFull(err) && fallback !== poolUrl) {
+          console.error("[migrate] session pool is full, retrying on the transaction pooler");
+          client.release();
+          client = null;
+          await pool.end();
+          return applyMigrations(fallback);
+        }
         throw err;
       }
       console.log(`[migrate] applied ${name}`);
@@ -79,12 +122,12 @@ async function main() {
     }
     console.log(count ? `[migrate] done — ${count} migration(s) applied.` : "[migrate] up to date.");
   } finally {
-    client.release();
-    await pool.end();
+    if (client) client.release();
+    await pool.end().catch(() => undefined);
   }
 }
 
-main().catch((err) => {
+applyMigrations(databaseUrl).catch((err) => {
   console.error("[migrate] failed:", err?.message || err);
   // pg errors carry the context needed to debug a bad SQL file.
   for (const key of ["code", "detail", "hint", "position", "where"]) {

@@ -29,6 +29,7 @@
     "@tanstack/router-plugin": "1.168.42",
     "@vitejs/plugin-react": "^5.2.0",
     "better-auth": "~1.6.30",
+    "esbuild": "^0.28.2",
     "jose": "6.2.9",
     "kysely": "^0.28.5",
     "lightningcss": "^1.28.0",

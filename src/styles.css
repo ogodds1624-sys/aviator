@@ -805,3 +805,36 @@ a:active,
   transform-origin: center;
   transform-box: fill-box;
 }
+
+/* Public pages: a short eased press. Desks keep the instant opacity click. */
+body.site-front button:not(:disabled),
+body.site-front a,
+body.site-front [role="button"] {
+  transition: transform 120ms cubic-bezier(0.22, 0.9, 0.28, 1);
+}
+
+body.site-front button:not(:disabled):active,
+body.site-front a:active,
+body.site-front [role="button"]:active {
+  opacity: 0.96;
+  transform: translateY(1px) scale(0.975);
+}
+
+body.site-front .buy-pulse:active {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.site-front button:not(:disabled),
+  body.site-front a,
+  body.site-front [role="button"] {
+    transition: none;
+  }
+
+  body.site-front button:not(:disabled):active,
+  body.site-front a:active,
+  body.site-front [role="button"]:active {
+    transform: none;
+    opacity: 0.9;
+  }
+}

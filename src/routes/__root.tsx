@@ -144,28 +144,32 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
     ],
   }),
-  component: () => (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <HeadContent />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{var c=navigator.connection;if(c&&(c.saveData||c.effectiveType==='slow-2g'||c.effectiveType==='2g'||c.effectiveType==='3g'))document.documentElement.classList.add('lite')}catch(e){}",
-          }}
-        />
-      </head>
-      <body>
-        <PreviewHostBridge />
-        <AuthProvider>
-          <CaptureReferral />
-          <CompletedSession />
-          <TapBounce />
-          <Outlet />
-          <SupportChat />
-        </AuthProvider>
-        <Scripts />
-      </body>
-    </html>
-  ),
+  component: function RootDocument() {
+    const path = useRouterState({ select: (state) => state.location.pathname });
+    const front = path !== "/admin" && path !== "/adminpage" && path !== "/partner";
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <HeadContent />
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "try{var c=navigator.connection;if(c&&(c.saveData||c.effectiveType==='slow-2g'||c.effectiveType==='2g'||c.effectiveType==='3g'))document.documentElement.classList.add('lite')}catch(e){}",
+            }}
+          />
+        </head>
+        <body className={front ? "site-front" : undefined}>
+          <PreviewHostBridge />
+          <AuthProvider>
+            <CaptureReferral />
+            <CompletedSession />
+            <TapBounce />
+            <Outlet />
+            <SupportChat />
+          </AuthProvider>
+          <Scripts />
+        </body>
+      </html>
+    );
+  },
 });

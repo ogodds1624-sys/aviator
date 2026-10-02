@@ -20,7 +20,7 @@
  * `process.env`, which is why the merge has to happen before Vite starts.
  */
 import { spawn } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { constants as osConstants } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -104,6 +104,39 @@ export function isMainModule(moduleUrl) {
   }
 }
 
+/**
+ * Node's `spawn` does not resolve PATHEXT. On Windows, `npm run dev` puts
+ * `vite.cmd` on PATH, and a direct spawn of `vite` fails with ENOENT, so the
+ * dev server never listens.
+ */
+export function windowsCommand(command, env) {
+  if (process.platform !== "win32") return null;
+  if (!command || command.includes("\\") || command.includes("/") || command.includes(".")) return null;
+  const pathKey = env.Path || env.PATH || "";
+  for (const dir of pathKey.split(";")) {
+    if (!dir) continue;
+    const candidate = join(dir, `${command}.cmd`);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/** The Node entry behind a npm `.cmd` shim, so Windows can spawn it without a shell. */
+export function windowsNodeScript(command, env) {
+  const shim = windowsCommand(command, env);
+  if (!shim) return null;
+  let text = "";
+  try {
+    text = readFileSync(shim, "utf8");
+  } catch {
+    return null;
+  }
+  const match = text.match(/%dp0%\\([^"]+\.js)/i);
+  if (!match) return null;
+  const script = join(dirname(shim), match[1]);
+  return existsSync(script) ? script : null;
+}
+
 function main(argv) {
   const [command, ...args] = argv;
   if (!command) {
@@ -111,7 +144,10 @@ function main(argv) {
     process.exit(2);
   }
   const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
-  const child = spawn(command, args, { stdio: "inherit", env });
+  const script = windowsNodeScript(command, env);
+  const child = script
+    ? spawn(process.execPath, [script, ...args], { stdio: "inherit", env, windowsHide: true })
+    : spawn(command, args, { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.on(signal, () => child.kill(signal));

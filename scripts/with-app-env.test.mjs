@@ -11,6 +11,8 @@ import {
   parseAppEnv,
   projectRoot,
   readAppEnv,
+  windowsCommand,
+  windowsNodeScript,
 } from "./with-app-env.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -71,6 +73,26 @@ test("vite loadEnv resolves the wrapped value", () => {
   const root = makeWorkspace('{"VITE_AUTH_ENABLED":"false"}');
   const merged = mergeAppEnv(readAppEnv(root), { PATH: "/usr/bin" });
   assert.equal(merged.VITE_AUTH_ENABLED, "false");
+});
+
+test("windowsCommand resolves a bare .cmd shim and leaves real executables alone", () => {
+  const dir = mkdtempSync(join(tmpdir(), "app-env-shim-"));
+  writeFileSync(join(dir, "vite.cmd"), "@echo off\r\n");
+  if (process.platform !== "win32") {
+    assert.equal(windowsCommand("vite", { PATH: dir }), null);
+    return;
+  }
+  assert.equal(windowsCommand("vite", { Path: dir }), join(dir, "vite.cmd"));
+  assert.equal(windowsCommand("node.exe", { Path: dir }), null);
+  assert.equal(windowsCommand(join(dir, "vite.cmd"), { Path: dir }), null);
+  const js = join(dir, "tool.js");
+  writeFileSync(js, "");
+  writeFileSync(join(dir, "tool.cmd"), '@ECHO off\r\n"%_prog%"  "%dp0%\\tool.js" %*\r\n');
+  if (process.platform === "win32") {
+    assert.equal(windowsNodeScript("tool", { Path: dir }), js);
+  } else {
+    assert.equal(windowsNodeScript("tool", { PATH: dir }), null);
+  }
 });
 
 test("the wrapped command runs with the app env applied", async () => {

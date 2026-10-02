@@ -145,8 +145,28 @@ function AdminPage() {
   const knownPartners = useRef<Set<string> | null>(null);
   const title = NAV.find((item) => item.id === tab)?.label ?? "OVERVIEW";
 
+  const passTyped = useRef(false);
+
   useEffect(() => {
     if (window.sessionStorage.getItem(ADMIN_KEY) === "1") setUnlocked(true);
+  }, []);
+
+  useEffect(() => {
+    passTyped.current = false;
+    setCode("");
+    const wipe = () => {
+      if (passTyped.current) return;
+      const input = document.getElementById("admin-pass");
+      if (input instanceof HTMLInputElement) input.value = "";
+      setCode("");
+    };
+    wipe();
+    const soon = window.setTimeout(wipe, 0);
+    const later = window.setTimeout(wipe, 400);
+    return () => {
+      window.clearTimeout(soon);
+      window.clearTimeout(later);
+    };
   }, []);
 
   useEffect(() => {
@@ -199,6 +219,8 @@ function AdminPage() {
     event.preventDefault();
     if (code.trim() === ADMIN_PASS) {
       window.sessionStorage.setItem(ADMIN_KEY, "1");
+      setCode("");
+      setShowCode(false);
       setUnlocked(true);
       setDenied(false);
       return;
@@ -261,7 +283,7 @@ function AdminPage() {
   if (!unlocked) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
-        <form onSubmit={unlock} className="menu-pop w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
+        <form autoComplete="off" onSubmit={unlock} className="menu-pop w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
           <div className="mx-auto grid size-16 place-items-center rounded-full border border-red/40 bg-red/15">
             <Lock className="size-7 text-gold" aria-hidden />
           </div>
@@ -276,14 +298,20 @@ function AdminPage() {
           <div className={"mt-5 flex h-14 items-center rounded-2xl border bg-ink px-4 " + (denied ? "border-red" : "border-white/15 focus-within:border-red")}>
             <input
               id="admin-pass"
+              name="admin-gate"
               value={code}
               onChange={(event) => {
+                passTyped.current = true;
                 setCode(event.target.value);
                 setDenied(false);
               }}
               type={showCode ? "text" : "password"}
               inputMode="numeric"
               autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              readOnly
+              onFocus={(event) => event.currentTarget.removeAttribute("readonly")}
               placeholder="Passcode"
               className="h-full min-w-0 flex-1 bg-transparent text-left text-base tracking-[0.2em] text-white outline-none placeholder:tracking-normal placeholder:text-[#8b95a7]"
             />
@@ -403,7 +431,6 @@ function AdminPage() {
 
           {tab === "overview" ? (
             <>
-              <TestimonyDesk rows={view.testimonies} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
               <h2 className="mt-8 text-2xl font-black">At a glance</h2>
               <p className="mt-1 text-base text-[#8b95a7]">Live snapshot of accounts that connected SportyBet.</p>
               <div className="stat-grid mt-4">
@@ -421,6 +448,7 @@ function AdminPage() {
                 <StatCard label="TOTAL NIGERIA" value={`₦${nigeriaRevenue.toLocaleString("en-NG")}`} note="Does not reset" icon={<NigeriaFlag />} iconClass="bg-white/10" />
               </div>
               <WeekRevenue payments={view.payments} country="Nigeria" />
+              <TestimonyDesk rows={view.testimonies} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
             </>
           ) : tab === "transactions" ? (
             <TransactionHistory payments={view.payments} busy={spinning} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} />
@@ -1131,7 +1159,7 @@ function TestimonyDesk({
   }
 
   return (
-    <section className="mt-4 rounded-3xl border border-white/10 bg-[#111111]">
+    <section className="mt-8 rounded-3xl border border-white/10 bg-[#111111]">
       <div className="px-4 py-4">
         <h2 className="text-xs font-extrabold tracking-[0.16em]">TESTIMONIES</h2>
       </div>

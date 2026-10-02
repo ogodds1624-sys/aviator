@@ -17,6 +17,8 @@ const REMEMBERED_EMAIL = "aviator-hack-email";
 export function AccountLanding({ mode }: { mode: Mode }) {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,10 +59,10 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       return;
     }
     if (holdTask1.current || stayOnRegister) return;
-    if (!isPending && user && !user.isDevFallback) {
+    if (!isPending && userId && !devFallback) {
       void continueAfterAccount();
     }
-  }, [isPending, user, navigate, stayOnRegister]);
+  }, [isPending, userId, devFallback, navigate, stayOnRegister]);
 
   useEffect(() => {
     if (!holdTask1.current) clearPending();

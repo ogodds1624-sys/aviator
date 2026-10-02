@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { memo, useEffect, useId, useRef } from "react";
 
 const HISTORY = ["1.58x", "20.92x", "1.10x", "0.89x", "1.14x", "10.38x", "3.08x", "1.63x", "1.17x"];
 const HISTORY_COLORS = ["#5ec8ff", "#e85cff", "#7d8cff", "#c084fc", "#60a5fa", "#f472b6", "#a78bfa", "#38bdf8", "#818cf8"];
@@ -25,7 +25,7 @@ function fillPath(t: number) {
   return `${curvePath(t)} L${end.x.toFixed(1)} 292 L36 292 Z`;
 }
 
-export function AviatorBoard() {
+export const AviatorBoard = memo(function AviatorBoard() {
   const rawId = useId().replace(/:/g, "");
   const rayId = `ray-${rawId}`;
   const fillId = `fill-${rawId}`;
@@ -317,4 +317,4 @@ export function AviatorBoard() {
       </g>
     </svg>
   );
-}
+});

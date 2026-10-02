@@ -6,6 +6,6 @@ export function getRouter() {
   return createRouter({
     routeTree,
     defaultErrorComponent: AppErrorComponent,
-    defaultViewTransition: true,
+    defaultViewTransition: false,
   });
 }

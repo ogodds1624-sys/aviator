@@ -27,6 +27,8 @@ function naira(amount: number) {
 function NigeriaPayPage() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
   const store = useLiveStorefront();
   const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
@@ -47,7 +49,7 @@ function NigeriaPayPage() {
     let stop = false;
     void getSportyLink().then((link) => {
       if (stop) return;
-      if (!link.signedIn || user?.isDevFallback) {
+      if (!link.signedIn || devFallback) {
         void navigate({ to: "/register" });
         return;
       }
@@ -56,7 +58,7 @@ function NigeriaPayPage() {
         return;
       }
       if (link.country !== "Nigeria") {
-        void navigate({ to: "/packages", viewTransition: true });
+        void navigate({ to: "/packages", viewTransition: false });
         return;
       }
       setReady(true);
@@ -64,7 +66,7 @@ function NigeriaPayPage() {
     return () => {
       stop = true;
     };
-  }, [isPending, user, navigate]);
+  }, [isPending, userId, devFallback, navigate]);
 
   useEffect(() => {
     if (!paymentId || result !== "pending") return;

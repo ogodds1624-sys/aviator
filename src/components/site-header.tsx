@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { UserButton } from "@/lib/auth/gates";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
-export function SiteHeader() {
+export const SiteHeader = memo(function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
   const [linkState, setLinkState] = useState<{ id: string; linked: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -75,4 +75,4 @@ export function SiteHeader() {
       </div>
     </header>
   );
-}
+});

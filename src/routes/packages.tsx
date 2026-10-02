@@ -40,6 +40,8 @@ const PACKAGES = [
 function PackagesPage() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
   const { rejected, stay } = Route.useSearch();
   const [ready, setReady] = useState(false);
   const store = useLiveStorefront();
@@ -50,7 +52,7 @@ function PackagesPage() {
     let stop = false;
     void getSportyLink().then((link) => {
       if (stop) return;
-      if (!link.signedIn || user?.isDevFallback) {
+      if (!link.signedIn || devFallback) {
         void navigate({ to: "/register" });
         return;
       }
@@ -59,7 +61,7 @@ function PackagesPage() {
         return;
       }
       if (link.country === "Nigeria") {
-        void navigate({ to: "/nigeria-pay", viewTransition: true });
+        void navigate({ to: "/nigeria-pay", viewTransition: false });
         return;
       }
       setReady(true);
@@ -67,7 +69,7 @@ function PackagesPage() {
     return () => {
       stop = true;
     };
-  }, [isPending, user, navigate]);
+  }, [isPending, userId, devFallback, navigate]);
 
   useEffect(() => {
     if (!rejected) return;
@@ -77,7 +79,7 @@ function PackagesPage() {
 
   useEffect(() => {
     if (stay) return;
-    if (sessionLeft() > 0) void navigate({ to: "/session", viewTransition: true });
+    if (sessionLeft() > 0) void navigate({ to: "/session", viewTransition: false });
   }, [navigate, stay]);
 
   if (!ready) {

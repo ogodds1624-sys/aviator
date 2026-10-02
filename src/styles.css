@@ -571,6 +571,7 @@ html,
 body {
   width: 100%;
   overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 .plane-sky {
@@ -779,6 +780,38 @@ summary,
 input,
 label {
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  summary,
+  [role="button"],
+  input,
+  label {
+    transition: none;
+  }
+
+  button:active,
+  a:active,
+  [role="button"]:active {
+    opacity: 0.82;
+  }
+
+  .buy-pulse {
+    animation-name: buy-throb-lite;
+  }
+
+  .buy-pulse::after,
+  .aviator-rays,
+  .plane-theme,
+  .star-rate {
+    animation: none;
+  }
+
+  .live-dot {
+    animation: none;
+  }
 }
 
 .cursor-lift {

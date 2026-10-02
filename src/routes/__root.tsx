@@ -16,9 +16,11 @@ let clearingIncomplete = false;
 
 function CompletedSession() {
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
 
   useEffect(() => {
-    if (isPending || user?.isDevFallback || clearingIncomplete) return;
+    if (isPending || devFallback || clearingIncomplete) return;
     let stop = false;
     void enforceCompletedAccount()
       .then((result) => {
@@ -36,7 +38,7 @@ function CompletedSession() {
     return () => {
       stop = true;
     };
-  }, [isPending, user]);
+  }, [isPending, userId, devFallback]);
 
   return null;
 }
@@ -44,16 +46,17 @@ function CompletedSession() {
 function CaptureReferral() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const signedIn = Boolean(user && !user.isDevFallback);
   const href = useRouterState({ select: (state) => state.location.href });
 
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref")?.trim() ?? "";
     if (ref) window.localStorage.setItem("aviator-ref", ref.slice(0, 80));
     if (!ref || isPending) return;
-    if (user && !user.isDevFallback) return;
+    if (signedIn) return;
     if (window.location.pathname === "/") return;
     void navigate({ to: "/", replace: true });
-  }, [href, isPending, user, navigate]);
+  }, [href, isPending, signedIn, navigate]);
 
   return null;
 }

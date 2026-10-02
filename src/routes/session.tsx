@@ -12,6 +12,8 @@ export const Route = createFileRoute("/session")({
 function SessionPage() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
   const [left, setLeft] = useState<number | null>(null);
   const [mins, setMins] = useState(0);
 
@@ -22,7 +24,7 @@ function SessionPage() {
       const ms = sessionLeft();
       if (!session || ms <= 0) {
         clearSession();
-        if (!user || user.isDevFallback) {
+        if (!userId || devFallback) {
           void navigate({ to: "/" });
           return;
         }
@@ -41,7 +43,7 @@ function SessionPage() {
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [navigate, isPending, user]);
+  }, [navigate, isPending, userId, devFallback]);
 
   if (left == null) return null;
   const total = Math.ceil(left / 1000);

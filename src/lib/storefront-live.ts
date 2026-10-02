@@ -12,6 +12,10 @@ export function bumpGateway() {
   window.dispatchEvent(new Event("aviator-gateway"));
 }
 
+function sameStore(current: Storefront, next: Storefront) {
+  return JSON.stringify(current) === JSON.stringify(next);
+}
+
 export function useLiveStorefront() {
   const [store, setStore] = useState<Storefront | null>(null);
 
@@ -20,15 +24,17 @@ export function useLiveStorefront() {
     const load = () => {
       void getStorefront({ data: { rev: Date.now() } })
         .then((next) => {
-          if (live) setStore(next);
+          if (!live) return;
+          setStore((current) => (current && sameStore(current, next) ? current : next));
         })
         .catch(() => undefined);
     };
     load();
+    const phone = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       load();
-    }, 3000);
+    }, phone ? 12000 : 3000);
     const onStorage = (event: StorageEvent) => {
       if (event.key === KEY) load();
     };

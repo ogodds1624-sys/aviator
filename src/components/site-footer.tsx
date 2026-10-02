@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { memo, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { getApprovedTestimonies, getSportyLink, submitTestimony } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -11,7 +11,7 @@ const LINKS = [
   { to: "/register", label: "Register" },
 ] as const;
 
-export function SiteFooter() {
+export const SiteFooter = memo(function SiteFooter() {
   const [live, setLive] = useState<{ name: string; place: string; text: string; stars: number }[]>([]);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -21,6 +21,8 @@ export function SiteFooter() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { user, isPending } = useCurrentUserState();
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
   const [linked, setLinked] = useState(false);
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback && linked;
   const store = useLiveStorefront();
@@ -45,7 +47,7 @@ export function SiteFooter() {
   }, []);
 
   useEffect(() => {
-    if (isPending || !user || user.isDevFallback) {
+    if (isPending || !userId || devFallback) {
       setLinked(false);
       return;
     }
@@ -60,7 +62,7 @@ export function SiteFooter() {
     return () => {
       current = false;
     };
-  }, [isPending, user]);
+  }, [isPending, userId, devFallback]);
 
   useEffect(() => {
     if (!nearStories) return;
@@ -69,14 +71,16 @@ export function SiteFooter() {
       if (document.hidden) return;
       void getApprovedTestimonies()
         .then((rows) => {
-          if (current) setLive(rows);
+          if (!current) return;
+          setLive((currentRows) => (sameStories(currentRows, rows) ? currentRows : rows));
         })
         .catch(() => {
           if (current) setLive([]);
         });
     };
     load();
-    const id = window.setInterval(load, 3000);
+    const phone = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    const id = window.setInterval(load, phone ? 12000 : 3000);
     return () => {
       current = false;
       window.clearInterval(id);
@@ -276,6 +280,20 @@ export function SiteFooter() {
         </footer>
       </div>
     </div>
+  );
+});
+
+function sameStories(
+  current: { name: string; place: string; text: string; stars: number }[],
+  next: { name: string; place: string; text: string; stars: number }[],
+) {
+  if (current.length !== next.length) return false;
+  return current.every(
+    (row, index) =>
+      row.name === next[index]?.name &&
+      row.place === next[index]?.place &&
+      row.text === next[index]?.text &&
+      row.stars === next[index]?.stars,
   );
 }
 

@@ -233,7 +233,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
         </Link>
         <div className="mt-3 mb-5 flex items-center justify-center gap-2.5">
           <img
-            src="/media/aviator-mark.png"
+            src="/media/aviator-mark.webp"
+            decoding="async"
             alt="Aviator"
             width="48"
             height="36"

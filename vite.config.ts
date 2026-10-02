@@ -157,6 +157,12 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: { tsconfigPaths: true },
+  build: {
+    target: ["es2020", "chrome100", "safari15"],
+    cssMinify: true,
+    minify: "esbuild",
+    sourcemap: false,
+  },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.

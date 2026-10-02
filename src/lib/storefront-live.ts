@@ -25,7 +25,10 @@ export function useLiveStorefront() {
         .catch(() => undefined);
     };
     load();
-    const timer = window.setInterval(load, 3000);
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      load();
+    }, 3000);
     const onStorage = (event: StorageEvent) => {
       if (event.key === KEY) load();
     };

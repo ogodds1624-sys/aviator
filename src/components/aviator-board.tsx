@@ -39,6 +39,7 @@ export function AviatorBoard() {
   const labelRef = useRef<SVGTextElement>(null);
   const betGroupRef = useRef<SVGGElement>(null);
   const coinRef = useRef<SVGGElement>(null);
+  const rootRef = useRef<SVGSVGElement>(null);
   const flyingRef = useRef(false);
   const multRef = useRef(1);
   const tRef = useRef(0);
@@ -96,6 +97,19 @@ export function AviatorBoard() {
       return;
     }
 
+    let onScreen = true;
+    const root = rootRef.current;
+    let observer: IntersectionObserver | undefined;
+    if (root && "IntersectionObserver" in window) {
+      observer = new IntersectionObserver(([entry]) => {
+        onScreen = Boolean(entry?.isIntersecting);
+      });
+      observer.observe(root);
+    }
+    const lowEnd = (navigator.hardwareConcurrency || 8) <= 4;
+    const minGap = lowEnd ? 34 : 0;
+    let lastPaint = 0;
+
     let flight = 0;
     const climbMs = 18000;
     const holdMs = 1400;
@@ -109,6 +123,13 @@ export function AviatorBoard() {
     const coinR = 18;
 
     const step = (now: number) => {
+      raf = requestAnimationFrame(step);
+      if (document.hidden || !onScreen) {
+        last = now;
+        return;
+      }
+      if (minGap && now - lastPaint < minGap) return;
+      lastPaint = now;
       const dt = Math.max(0, Math.min(48, now - last));
       last = now;
       if (cashingRef.current) {
@@ -148,7 +169,6 @@ export function AviatorBoard() {
             coinRef.current.setAttribute("transform", `translate(${coinX.toFixed(1)} ${coinY.toFixed(1)}) rotate(${spin})`);
           }
           paint(multRef.current, tRef.current, true);
-          raf = requestAnimationFrame(step);
           return;
         }
       }
@@ -157,18 +177,21 @@ export function AviatorBoard() {
       const t = Math.min(1, flight / climbMs);
       const mult = 1 + t * 4;
       paint(mult, t);
-      raf = requestAnimationFrame(step);
     };
 
     paint(1, 0);
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer?.disconnect();
+    };
   }, []);
 
   const start = point(0);
 
   return (
     <svg
+      ref={rootRef}
       viewBox="0 0 360 470"
       width="360"
       height="470"

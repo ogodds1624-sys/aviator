@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Flame, Gem, Zap } from "lucide-react";
+import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -99,10 +100,7 @@ function PackagesPage() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
-      <div className="plane-sky" aria-hidden>
-        <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
-        <div className="plane-sky-shade" />
-      </div>
+      <PlaneSky />
       {pending != null ? <SignalLoading /> : null}
       <div className="relative z-10 mx-auto w-full max-w-md">
         {alertOn ? (

@@ -4,6 +4,7 @@ import { ArrowRight, Flame, Gem, X, Zap } from "lucide-react";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
+import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
@@ -179,10 +180,7 @@ function NigeriaPayPage() {
   if (amount == null || !showPay) {
     return (
       <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
-        <div className="plane-sky" aria-hidden>
-          <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
-          <div className="plane-sky-shade" />
-        </div>
+        <PlaneSky />
         {amount != null ? <SignalLoading /> : null}
         <div className="relative z-10 mx-auto w-full max-w-md">
           {alertOn ? (

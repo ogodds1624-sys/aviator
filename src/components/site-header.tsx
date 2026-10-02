@@ -37,10 +37,12 @@ export function SiteHeader() {
     <header className="site-header sticky top-0 z-40 bg-ink">
       <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 text-white no-underline">
         <img
-          src="/media/aviator-mark.png"
+          src="/media/aviator-mark.webp"
           alt="Aviator"
           width="36"
           height="36"
+          decoding="async"
+          fetchPriority="high"
           className="brand-mark"
         />
         <span className="truncate text-sm leading-none font-black tracking-tight italic sm:text-base">

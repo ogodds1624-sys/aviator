@@ -146,12 +146,13 @@ function Home() {
         <article className="overflow-hidden rounded-3xl border border-line bg-ink">
           <div className="relative aspect-[16/10] overflow-hidden bg-[#12081f]">
             <img
-              src="/media/aviator.jpg"
+              src="/media/aviator.webp"
               alt="Aviator live round"
               width={960}
-              height={600}
+              height={525}
               className="h-full w-full object-cover"
               decoding="async"
+              loading="lazy"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full border border-red/50 bg-black/60 px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">

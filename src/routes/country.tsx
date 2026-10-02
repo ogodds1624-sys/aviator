@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
 import { readPending, savePending } from "@/lib/pending-registration";
@@ -76,10 +77,7 @@ function CountryPage() {
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8">
-      <div className="plane-sky" aria-hidden>
-        <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
-        <div className="plane-sky-shade" />
-      </div>
+      <PlaneSky />
       <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
           <button
             type="button"

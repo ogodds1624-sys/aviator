@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { getApprovedTestimonies, getSportyLink, submitTestimony } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -25,6 +25,24 @@ export function SiteFooter() {
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback && linked;
   const store = useLiveStorefront();
   const whatsapp = store?.whatsapp ?? "";
+  const storiesRef = useRef<HTMLElement>(null);
+  const [nearStories, setNearStories] = useState(false);
+
+  useEffect(() => {
+    const node = storiesRef.current;
+    if (!node || !("IntersectionObserver" in window)) {
+      setNearStories(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setNearStories(true);
+      },
+      { rootMargin: "480px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (isPending || !user || user.isDevFallback) {
@@ -45,8 +63,10 @@ export function SiteFooter() {
   }, [isPending, user]);
 
   useEffect(() => {
+    if (!nearStories) return;
     let current = true;
     const load = () => {
+      if (document.hidden) return;
       void getApprovedTestimonies()
         .then((rows) => {
           if (current) setLive(rows);
@@ -61,7 +81,7 @@ export function SiteFooter() {
       current = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [nearStories]);
 
   const stories = live;
   const chat = whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent("Text us")}` : "";
@@ -85,8 +105,8 @@ export function SiteFooter() {
   }
 
   return (
-    <div className="mt-12">
-      <section className="overflow-hidden" aria-label="Testimonies">
+    <div className="below-fold mt-12">
+      <section ref={storiesRef} className="overflow-hidden" aria-label="Testimonies">
         <h2 className="px-4 text-center text-xs font-extrabold tracking-[0.16em] text-gold">TESTIMONIES</h2>
         {stories.length === 0 ? (
           <p className="mt-4 px-4 text-center text-sm text-[#8b95a7]">Approved testimonies from the admin desk show here.</p>
@@ -173,7 +193,7 @@ export function SiteFooter() {
           <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <section>
           <Link to="/" className="inline-flex items-center gap-2 text-white no-underline">
-            <img src="/media/aviator-mark.png" alt="" width="36" height="36" className="size-9" />
+            <img src="/media/aviator-mark.webp" alt="" width="36" height="36" decoding="async" loading="lazy" className="size-9" />
             <span className="text-base font-black tracking-tight italic">
               AVIATOR <span className="text-red">HACK</span>
             </span>

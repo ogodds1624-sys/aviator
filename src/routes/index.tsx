@@ -34,8 +34,9 @@ function Home() {
   const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
-  const [linked, setLinked] = useState(false);
-  const registered = signedIn && linked;
+  const [linked, setLinked] = useState<boolean | null>(null);
+  const [accountCountry, setAccountCountry] = useState<"Ghana" | "Nigeria" | null>(null);
+  const registered = signedIn && linked === true;
   const [loading, setLoading] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const [tick, setTick] = useState(0);
@@ -43,12 +44,16 @@ function Home() {
   useEffect(() => {
     if (!signedIn) {
       setLinked(false);
+      setAccountCountry(null);
       return;
     }
     let stop = false;
+    setLinked(null);
     void getSportyLink()
       .then((link) => {
-        if (!stop) setLinked(link.linked);
+        if (stop) return;
+        setLinked(link.linked);
+        setAccountCountry(link.country === "Nigeria" ? "Nigeria" : link.country === "Ghana" ? "Ghana" : null);
       })
       .catch(() => {
         if (!stop) setLinked(false);
@@ -101,8 +106,17 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    if (ref) window.localStorage.setItem("aviator-ref", ref);
+    if (ref) window.localStorage.setItem("aviator-ref", ref.slice(0, 80));
   }, [ref]);
+
+  useEffect(() => {
+    if (!registered) return;
+    if (accountCountry === "Nigeria") {
+      void navigate({ to: "/nigeria-pay", replace: true });
+      return;
+    }
+    void navigate({ to: "/packages", search: { stay: 1 }, replace: true });
+  }, [registered, accountCountry, navigate]);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((n) => n + 1), 3500);
@@ -122,6 +136,14 @@ function Home() {
 
   const rows = [0, 1, 2].map((offset) => CALLS[(tick + offset) % CALLS.length]);
   const tape = [...CALLS, ...CALLS];
+
+  if (isPending || linked === null || registered) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-ink text-white">

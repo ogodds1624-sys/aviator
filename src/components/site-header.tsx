@@ -63,7 +63,7 @@ export function SiteHeader() {
               to="/register"
               className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
             >
-              Register
+              Sign Up
             </Link>
           </>
         )}

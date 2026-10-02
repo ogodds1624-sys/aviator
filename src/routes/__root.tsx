@@ -1,4 +1,4 @@
-import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AuthProvider } from "@/lib/auth/provider";
 import { signOut } from "@/lib/auth/client";
@@ -39,6 +39,23 @@ function CompletedSession() {
   return null;
 }
 
+function CaptureReferral() {
+  const navigate = useNavigate();
+  const { user, isPending } = useCurrentUserState();
+  const href = useRouterState({ select: (state) => state.location.href });
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref")?.trim() ?? "";
+    if (ref) window.localStorage.setItem("aviator-ref", ref.slice(0, 80));
+    if (!ref || isPending) return;
+    if (user && !user.isDevFallback) return;
+    if (window.location.pathname === "/") return;
+    void navigate({ to: "/", replace: true });
+  }, [href, isPending, user, navigate]);
+
+  return null;
+}
+
 function TapBounce() {
   const path = useRouterState({ select: (state) => state.location.pathname });
   const quiet = path !== "/";
@@ -49,7 +66,6 @@ function TapBounce() {
     window.localStorage.setItem(stamp, "1");
     for (const key of [
       "aviator-hack-email",
-      "aviator-ref",
       "aviator-country",
       "aviator-hack-sportybet",
       "aviator-session",
@@ -129,6 +145,7 @@ export const Route = createRootRoute({
       <body>
         <PreviewHostBridge />
         <AuthProvider>
+          <CaptureReferral />
           <CompletedSession />
           <TapBounce />
           <Outlet />

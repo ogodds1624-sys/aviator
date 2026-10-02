@@ -22,7 +22,7 @@ function SessionPage() {
       if (!session || ms <= 0) {
         clearSession();
         if (!user || user.isDevFallback) {
-          void navigate({ to: "/login" });
+          void navigate({ to: "/" });
           return;
         }
         void getSportyLink().then((link) => {

@@ -6,7 +6,6 @@ import { authClient, authEnabled } from "@/lib/auth/client";
 import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
-import { sessionLeft } from "@/lib/desk-session";
 import { rememberReferral } from "@/lib/remember-ref";
 
 type Mode = "register" | "login";
@@ -36,11 +35,11 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       link = await getSportyLink();
     }
     if (link.linked) {
-      if (sessionLeft() > 0) {
-        await navigate({ to: "/session" });
+      if (link.country === "Nigeria") {
+        await navigate({ to: "/nigeria-pay" });
         return;
       }
-      await navigate({ to: link.country === "Nigeria" ? "/nigeria-pay" : "/packages" });
+      await navigate({ to: "/packages", search: { stay: 1 } });
       return;
     }
     await navigate({ to: "/connect" });
@@ -93,7 +92,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 email: trimmed,
                 password,
                 rememberMe: true,
-                callbackURL: "/login",
               });
           if (!result.error) {
             window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);

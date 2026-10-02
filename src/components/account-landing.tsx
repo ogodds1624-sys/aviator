@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
-import { TaskSuccess } from "@/components/task-success";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink } from "@/lib/admin-snapshot";
@@ -24,8 +23,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [isTask1Done, setIsTask1Done] = useState(false);
-  const [continueError, setContinueError] = useState<string | null>(null);
   const [taken, setTaken] = useState(false);
   const holdTask1 = useRef(false);
   const [stayOnRegister, setStayOnRegister] = useState(false);
@@ -59,11 +56,11 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       setStayOnRegister(true);
       return;
     }
-    if (holdTask1.current || stayOnRegister || isTask1Done) return;
+    if (holdTask1.current || stayOnRegister) return;
     if (!isPending && user && !user.isDevFallback) {
       void continueAfterAccount();
     }
-  }, [isPending, user, navigate, isTask1Done, stayOnRegister]);
+  }, [isPending, user, navigate, stayOnRegister]);
 
   useEffect(() => {
     if (!holdTask1.current) clearPending();
@@ -134,7 +131,17 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 country: null,
                 completionStatus: false,
               });
-              setIsTask1Done(true);
+              let link = await readLink();
+              for (let check = 0; check < 15 && !link?.signedIn; check += 1) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                link = await readLink();
+              }
+              if (!link?.signedIn) {
+                holdTask1.current = false;
+                setError("Registration is saved. Tap Create account again once the session connects.");
+                return;
+              }
+              await navigate({ to: "/country" });
               return;
             }
             const failure = result.error as { message?: string; code?: string; status?: number; statusText?: string };
@@ -207,45 +214,10 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     }
   }
 
-  async function continueToCountry() {
-    if (!isTask1Done) return;
-    setContinueError(null);
-    let link = await readLink();
-    for (let attempt = 0; attempt < 15 && !link?.signedIn; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      link = await readLink();
-    }
-    if (!link?.signedIn) {
-      setContinueError("Registration is saved. Tap Continue again once the session connects.");
-      return;
-    }
-    await navigate({ to: "/country" });
-  }
-
-  if (!isTask1Done && (isPending || (user && !user.isDevFallback && !stayOnRegister))) {
+  if (isPending || (user && !user.isDevFallback && !stayOnRegister)) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
-      </main>
-    );
-  }
-
-  if (isTask1Done) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
-        <div className="w-full max-w-md">
-          <TaskSuccess
-            title="Account created"
-            message="Registration is saved. Continue to the country page."
-            ready={isTask1Done}
-            onContinue={() => void continueToCountry()}
-          />
-          {continueError ? (
-            <p className="mt-3 text-center text-sm font-medium text-red" role="alert">
-              {continueError}
-            </p>
-          ) : null}
-        </div>
       </main>
     );
   }

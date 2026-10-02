@@ -95,18 +95,6 @@ function Home() {
             {store.rates.map((rate) => `${rate.country} ${rate.unit}${rate.perGhs} per GHS`).join(" · ")}
           </p>
         ) : null}
-        {store && (store.wallets.length > 0 || store.banks.length > 0 || store.nigeriaAccounts.length > 0) ? (
-          <p className="mt-2 text-sm text-muted">
-            Pay with{" "}
-            {[
-              ...store.wallets.map((wallet) => wallet.network),
-              ...store.banks.map((account) => account.bank || "bank"),
-              ...(store.nigeriaAccounts.length > 0 ? ["Nigeria transfer"] : []),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        ) : null}
         <div className="hero-actions">
           <button
             type="button"

@@ -3,7 +3,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { authClient, authEnabled } from "@/lib/auth/client";
-import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
 import { rememberReferral } from "@/lib/remember-ref";
@@ -24,8 +23,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const [countryStep, setCountryStep] = useState(false);
   const [countryWait, setCountryWait] = useState(false);
   const [taken, setTaken] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const holdCountry = useRef(false);
+  const stayOnRegister = useRef(false);
   const register = mode === "register";
 
   async function continueAfterAccount() {
@@ -46,7 +45,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   }
 
   useEffect(() => {
-    if (holdCountry.current || countryStep) return;
+    if (holdCountry.current || countryStep || stayOnRegister.current) return;
     if (!isPending && user && !user.isDevFallback) {
       void continueAfterAccount();
     }
@@ -154,7 +153,15 @@ export function AccountLanding({ mode }: { mode: Mode }) {
     return () => window.clearTimeout(id);
   }, [countryWait, navigate]);
 
-  if (isPending || (user && !user.isDevFallback && !countryStep)) {
+  function backToRegistration() {
+    holdCountry.current = false;
+    stayOnRegister.current = true;
+    setCountryWait(false);
+    setCountryStep(false);
+    void navigate({ to: "/register" });
+  }
+
+  if (isPending || (user && !user.isDevFallback && !countryStep && !stayOnRegister.current)) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
@@ -171,6 +178,13 @@ export function AccountLanding({ mode }: { mode: Mode }) {
         </div>
         {countryWait ? <SignalLoading /> : null}
         <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
+          <button
+            type="button"
+            onClick={backToRegistration}
+            className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
+          >
+            ← BACK
+          </button>
           <h1 className="text-center text-2xl font-black tracking-tight">Where are you playing from?</h1>
           <div className="mt-5 grid gap-3">
             <button
@@ -207,17 +221,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               </span>
             </button>
           </div>
-          <button
-            type="button"
-            disabled={signingOut || countryWait}
-            onClick={() => {
-              setSigningOut(true);
-              void signOut("/").catch(() => setSigningOut(false));
-            }}
-            className="mt-4 h-11 w-full rounded-2xl border border-white/15 bg-ink text-sm font-extrabold text-white disabled:opacity-60"
-          >
-            {signingOut ? "Signing out…" : "Sign out"}
-          </button>
         </section>
       </main>
     );

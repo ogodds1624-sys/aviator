@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
-import { signOut } from "@/lib/auth/client";
 import { getSportyLink, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
 import { sessionLeft } from "@/lib/desk-session";
 import { rememberReferral } from "@/lib/remember-ref";
@@ -49,7 +48,6 @@ function ConnectPage() {
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"form" | "loading" | "done" | "leaving">("form");
   const [country, setCountry] = useState<"Ghana" | "Nigeria">("Ghana");
-  const [signingOut, setSigningOut] = useState(false);
   const [ready, setReady] = useState(false);
   const nigeria = country === "Nigeria";
 
@@ -198,17 +196,6 @@ function ConnectPage() {
               <ArrowRight className="size-5" aria-hidden />
             </button>
           </form>
-          <button
-            type="button"
-            disabled={signingOut}
-            onClick={() => {
-              setSigningOut(true);
-              void signOut("/").catch(() => setSigningOut(false));
-            }}
-            className="mt-4 h-11 w-full rounded-2xl border border-white/15 bg-ink text-sm font-extrabold text-white disabled:opacity-60"
-          >
-            {signingOut ? "Signing out…" : "Sign out"}
-          </button>
       </section>
     </main>
   );

@@ -78,10 +78,7 @@ function PayPage() {
       return;
     }
     if (result === "rejected") {
-      const id = window.setTimeout(() => {
-        void navigate({ to: "/packages", search: { rejected: 1 }, viewTransition: false });
-      }, 1700);
-      return () => window.clearTimeout(id);
+      void navigate({ to: "/packages", search: { rejected: 1 }, viewTransition: false });
     }
   }, [result, amount, navigate]);
 

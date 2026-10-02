@@ -86,15 +86,12 @@ function NigeriaPayPage() {
       return;
     }
     if (result === "rejected") {
-      const id = window.setTimeout(() => {
-        setWaiting(false);
-        setPaymentId(null);
-        setResult("pending");
-        setShowPay(false);
-        setAmount(null);
-        setAlertOn(true);
-      }, 1700);
-      return () => window.clearTimeout(id);
+      setWaiting(false);
+      setPaymentId(null);
+      setResult("pending");
+      setShowPay(false);
+      setAmount(null);
+      setAlertOn(true);
     }
   }, [result, amount, navigate]);
 

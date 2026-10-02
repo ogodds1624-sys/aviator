@@ -484,12 +484,9 @@
   }
 }
 
-::view-transition-old(root) {
-  animation: page-out 0.28s ease both;
-}
-
+::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: page-in 0.42s ease both;
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -678,7 +675,7 @@ body {
 }
 
 .menu-pop {
-  animation: reject-pop 0.55s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  animation: none;
 }
 
 @keyframes save-hold {
@@ -704,13 +701,10 @@ body {
   animation: save-hold 2s ease both;
 }
 
-.reject-alert {
-  animation: page-in 0.35s ease both;
-}
-
+.reject-alert,
 .reject-card,
 .reject-banner {
-  animation: reject-pop 0.55s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  animation: none;
 }
 
 @keyframes buy-shine {
@@ -779,24 +773,16 @@ summary,
 [role="button"],
 input,
 label {
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: none;
+}
+
+button:active,
+a:active,
+[role="button"]:active {
+  opacity: 0.82;
 }
 
 @media (hover: none) and (pointer: coarse) {
-  button,
-  a,
-  summary,
-  [role="button"],
-  input,
-  label {
-    transition: none;
-  }
-
-  button:active,
-  a:active,
-  [role="button"]:active {
-    opacity: 0.82;
-  }
 
   .buy-pulse {
     animation-name: buy-throb-lite;

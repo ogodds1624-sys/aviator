@@ -41,7 +41,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   async function continueAfterAccount() {
     let link = await readLink();
     for (let attempt = 0; attempt < 15 && !link?.signedIn; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       link = await readLink();
     }
     if (!link?.signedIn) {
@@ -135,7 +135,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               });
               let link = await readLink();
               for (let check = 0; check < 15 && !link?.signedIn; check += 1) {
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 100));
                 link = await readLink();
               }
               if (!link?.signedIn) {

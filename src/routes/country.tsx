@@ -40,11 +40,7 @@ function CountryPage() {
     setSaving(true);
     try {
       await savePlayerCountry({ data: { country } });
-      let link = await getSportyLink();
-      for (let check = 0; check < 8 && link.country !== country; check += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        link = await getSportyLink();
-      }
+      const link = await getSportyLink();
       if (link.country !== country) {
         stayForContinue.current = false;
         setError("Could not confirm that country.");

@@ -1,15 +1,39 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { UserButton } from "@/lib/auth/gates";
+import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
   const [returning, setReturning] = useState(false);
+  const [linked, setLinked] = useState<boolean | null>(null);
 
   useEffect(() => {
     setReturning(Boolean(window.localStorage.getItem("aviator-hack-email")));
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (isPending || !user || user.isDevFallback) {
+      setLinked(false);
+      return;
+    }
+    let stop = false;
+    setLinked(null);
+    void getSportyLink()
+      .then((link) => {
+        if (!stop) setLinked(link.linked);
+      })
+      .catch(() => {
+        if (!stop) setLinked(false);
+      });
+    return () => {
+      stop = true;
+    };
+  }, [isPending, user]);
+
+  const registered = !isPending && Boolean(user) && !user?.isDevFallback && linked === true;
+  const checking = !isPending && Boolean(user) && !user?.isDevFallback && linked === null;
 
   return (
     <header className="site-header sticky top-0 z-40 bg-ink">
@@ -26,9 +50,9 @@ export function SiteHeader() {
         </span>
       </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {isPending ? (
+        {isPending || checking ? (
           <div className="h-9 w-16 animate-pulse rounded-full bg-white/10 sm:w-24" aria-hidden />
-        ) : user ? (
+        ) : registered ? (
           <div className="text-white">
             <UserButton />
           </div>

@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
+import { leaveUnlinked } from "@/lib/leave-unlinked";
 import { sessionLeft } from "@/lib/desk-session";
 import { rememberReferral } from "@/lib/remember-ref";
 
@@ -163,12 +164,13 @@ function ConnectPage() {
       <AviatorSky />
       {phase === "loading" ? <SignalLoading /> : null}
       <section className="relative z-10 w-full max-w-md min-w-0 rounded-[28px] border border-white/10 bg-black/55 px-5 py-7">
-        <Link
-          to="/"
-          className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25 no-underline"
+        <button
+          type="button"
+          onClick={() => void leaveUnlinked()}
+          className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
         >
-          ← BACK HOME
-        </Link>
+          ← BACK
+        </button>
         <h1 className="mt-4 text-[28px] leading-tight font-extrabold tracking-tight">
           Connect your SportyBet account
         </h1>

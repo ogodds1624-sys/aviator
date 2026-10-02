@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
-import { getApprovedTestimonies, submitTestimony } from "@/lib/admin-snapshot";
+import { getApprovedTestimonies, getSportyLink, submitTestimony } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 
@@ -22,13 +22,32 @@ export function SiteFooter() {
   const [busy, setBusy] = useState(false);
   const [returning, setReturning] = useState(false);
   const { user, isPending } = useCurrentUserState();
-  const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
+  const [linked, setLinked] = useState(false);
+  const signedIn = !isPending && Boolean(user) && !user?.isDevFallback && linked;
   const store = useLiveStorefront();
   const whatsapp = store?.whatsapp ?? "";
 
   useEffect(() => {
     setReturning(Boolean(window.localStorage.getItem("aviator-hack-email")));
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (isPending || !user || user.isDevFallback) {
+      setLinked(false);
+      return;
+    }
+    let current = true;
+    void getSportyLink()
+      .then((link) => {
+        if (current) setLinked(link.linked);
+      })
+      .catch(() => {
+        if (current) setLinked(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [isPending, user]);
 
   useEffect(() => {
     let current = true;

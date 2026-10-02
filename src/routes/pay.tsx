@@ -22,7 +22,9 @@ function PayPage() {
   const { user, isPending } = useCurrentUserState();
   const { amount } = Route.useSearch();
   const store = useLiveStorefront();
-  const [ready, setReady] = useState(false);
+  const userId = user?.id ?? "";
+  const devFallback = user?.isDevFallback === true;
+  const [allowed, setAllowed] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -33,26 +35,31 @@ function PayPage() {
   useEffect(() => {
     if (isPending) return;
     let stop = false;
-    void getSportyLink().then((link) => {
-      if (stop) return;
-      if (!link.signedIn || user?.isDevFallback) {
-        void navigate({ to: "/register" });
-        return;
-      }
-      if (!link.linked) {
-        void openTask(navigate, link);
-        return;
-      }
-      if (link.country === "Nigeria") {
-        void navigate({ to: "/nigeria-pay", viewTransition: true });
-        return;
-      }
-      setReady(true);
-    });
+    void getSportyLink()
+      .then((link) => {
+        if (stop) return;
+        if (!link.signedIn || devFallback) {
+          void navigate({ to: "/register", viewTransition: false });
+          return;
+        }
+        if (!link.linked) {
+          void openTask(navigate, link);
+          return;
+        }
+        if (link.country === "Nigeria") {
+          void navigate({ to: "/nigeria-pay", viewTransition: false });
+          return;
+        }
+        setAllowed(true);
+      })
+      .catch(() => {
+        if (stop) return;
+        setError("Could not open checkout. Go back and choose the package again.");
+      });
     return () => {
       stop = true;
     };
-  }, [isPending, user, navigate]);
+  }, [isPending, userId, devFallback, navigate]);
 
   useEffect(() => {
     if (!paymentId || result !== "pending") return;
@@ -139,14 +146,6 @@ function PayPage() {
 
   const waitingLabel =
     result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
-
-  if (!ready) {
-    return (
-      <main className="grid min-h-dvh place-items-center bg-ink">
-        <SignalLoading />
-      </main>
-    );
-  }
 
   return (
     <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">
@@ -260,7 +259,8 @@ function PayPage() {
                 {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
                 <button
                   type="submit"
-                  className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white"
+                  disabled={!allowed}
+                  className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                 >
                   I'VE SENT THE MONEY
                 </button>

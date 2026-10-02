@@ -140,7 +140,9 @@ function PackagesPage() {
                 <p className="mt-4 text-lg font-semibold text-white">{pack.detail}</p>
                 <button
                   type="button"
-                  onClick={() => void navigate({ to: "/pay", search: { amount: pack.price } })}
+                  onClick={() =>
+                    void navigate({ to: "/pay", search: { amount: pack.price }, viewTransition: false })
+                  }
                   style={{ animationDelay: `${index * 0.2}s` }}
                   className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                 >

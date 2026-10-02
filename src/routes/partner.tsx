@@ -449,8 +449,6 @@ function DayList({
   );
 }
 
-const phoneCols = "grid grid-cols-[5.75rem_5.5rem_minmax(0,1fr)] items-center gap-x-2 px-3";
-
 function Referrals({ rows }: { rows: PartnerPortal["referrals"] }) {
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#111111]">
@@ -465,32 +463,7 @@ function Referrals({ rows }: { rows: PartnerPortal["referrals"] }) {
           No referrals yet. Share your link to get started.
         </p>
       ) : (
-        <>
-        <div className="md:hidden">
-          <div className={phoneCols + " border-t border-[#333] bg-white/[0.03] py-2.5 text-[10px] font-extrabold tracking-[0.12em] text-[#9aa3b2]"}>
-            <span>DATE</span>
-            <span className="text-center">STATUS</span>
-            <span>REFERRAL NAME</span>
-          </div>
-          {rows.map((row) => {
-            const joined = row.joined ? new Date(row.joined) : null;
-            const when = joined && !Number.isNaN(joined.getTime())
-              ? joined.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
-              : "—";
-            return (
-              <div key={row.name + row.joined} className={phoneCols + " min-h-12 border-t border-[#333] py-2.5 text-xs"}>
-                <span className="tabular-nums font-semibold text-[#c5cad3]">{when}</span>
-                <span className="justify-self-center">
-                  <span className={row.status === "paid" ? "pill-active" : "pill-unpaid"}>
-                    {row.status === "paid" ? "ACTIVE" : "UNPAID"}
-                  </span>
-                </span>
-                <span className="truncate font-bold">{row.name}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="hidden w-full overflow-x-auto md:block">
+        <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[36rem] border-collapse text-sm">
             <thead>
               <tr className="border-t border-[#333] text-left text-[11px] font-bold tracking-[0.14em] text-[#aaa]">
@@ -531,7 +504,6 @@ function Referrals({ rows }: { rows: PartnerPortal["referrals"] }) {
             </tbody>
           </table>
         </div>
-        </>
       )}
     </section>
   );

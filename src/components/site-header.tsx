@@ -6,34 +6,32 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
-  const [linked, setLinked] = useState<boolean | null>(null);
+  const [linkState, setLinkState] = useState<{ id: string; linked: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const userId = user && !user.isDevFallback ? user.id : "";
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isPending || !user || user.isDevFallback) {
-      setLinked(false);
-      return;
-    }
+    if (!userId) return;
     let stop = false;
-    setLinked(null);
     void getSportyLink()
       .then((link) => {
-        if (!stop) setLinked(link.linked);
+        if (!stop) setLinkState({ id: userId, linked: link.linked });
       })
       .catch(() => {
-        if (!stop) setLinked(false);
+        if (!stop) setLinkState({ id: userId, linked: false });
       });
     return () => {
       stop = true;
     };
-  }, [isPending, user]);
+  }, [userId]);
 
-  const registered = !isPending && Boolean(user) && !user?.isDevFallback && linked === true;
-  const checking = !isPending && Boolean(user) && !user?.isDevFallback && linked === null;
+  const known = linkState?.id === userId ? linkState.linked : null;
+  const registered = Boolean(userId) && known === true;
+  const checking = Boolean(userId) && known === null;
 
   return (
     <header className="site-header sticky top-0 z-40 bg-ink">
@@ -50,7 +48,7 @@ export function SiteHeader() {
         </span>
       </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {!mounted || isPending || checking ? (
+        {!mounted || checking || (isPending && !userId) ? (
           <div className="h-9 w-16 animate-pulse rounded-full bg-white/10 sm:w-24" aria-hidden />
         ) : registered ? (
           <div className="text-white">

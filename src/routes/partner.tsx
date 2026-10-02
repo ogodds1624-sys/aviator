@@ -27,7 +27,11 @@ function PartnersPage() {
   const [waiting, setWaiting] = useState(false);
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem(TOKEN_KEY);
+    const saved = window.localStorage.getItem(TOKEN_KEY) || window.sessionStorage.getItem(TOKEN_KEY);
+    if (saved) {
+      window.localStorage.setItem(TOKEN_KEY, saved);
+      window.sessionStorage.setItem(TOKEN_KEY, saved);
+    }
     setToken(saved);
     setReady(true);
   }, []);
@@ -50,6 +54,7 @@ function PartnersPage() {
             setWaiting(true);
             return;
           }
+          window.localStorage.removeItem(TOKEN_KEY);
           window.sessionStorage.removeItem(TOKEN_KEY);
           setToken(null);
           setWaiting(false);
@@ -74,6 +79,7 @@ function PartnersPage() {
     setError(null);
     try {
       const result = await partnerLogin({ data: { email, password } });
+      window.localStorage.setItem(TOKEN_KEY, result.token);
       window.sessionStorage.setItem(TOKEN_KEY, result.token);
       setToken(result.token);
     } catch (err) {
@@ -93,6 +99,7 @@ function PartnersPage() {
     setBusy(true);
     try {
       const result = await applyPartner({ data: { name, email, password } });
+      window.localStorage.setItem(TOKEN_KEY, result.token);
       window.sessionStorage.setItem(TOKEN_KEY, result.token);
       setWaiting(true);
       setToken(result.token);
@@ -106,6 +113,7 @@ function PartnersPage() {
   }
 
   function signOut() {
+    window.localStorage.removeItem(TOKEN_KEY);
     window.sessionStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setPortal(null);

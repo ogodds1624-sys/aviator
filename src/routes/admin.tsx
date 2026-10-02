@@ -17,6 +17,7 @@ import {
   saveGatewayCheckout,
   saveGatewayRates,
   setPartnerCommission,
+  setPartnerLock,
   setTestimonyStatus,
   type AdminSnapshot,
   type AdminTestimony,
@@ -820,9 +821,21 @@ function PartnerDesk({
                   <p className="truncate font-extrabold">{partner.name}</p>
                   <p className="truncate text-xs text-[#6b7280]">{partner.email}</p>
                 </div>
-                <span className={partner.status === "approved" ? "pill-active" : "pill-unpaid"}>
-                  {partner.status === "approved" ? "APPROVED" : partner.status === "pending" ? "PENDING" : "LOCKED"}
-                </span>
+                <div className="flex min-w-0 flex-col items-start gap-1">
+                  <span className={partner.status === "approved" ? "pill-active" : "pill-unpaid"}>
+                    {partner.status === "approved" ? "APPROVED" : partner.status === "pending" ? "PENDING" : "LOCKED"}
+                  </span>
+                  {partner.status === "pending" ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void run(() => setPartnerLock({ data: { id: partner.id, locked: false } }))}
+                      className="h-7 rounded-lg bg-red px-2 text-[10px] font-extrabold text-white disabled:opacity-60"
+                    >
+                      APPROVE
+                    </button>
+                  ) : null}
+                </div>
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-bold">{partner.code}</span>
                   <button type="button" onClick={() => void copy(partner.id, partner.code)} className="shrink-0 text-[10px] font-extrabold text-[#9aa3b2]">
@@ -907,7 +920,7 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
 }
 
 const partnerCols =
-  "partner-row desk-row grid-cols-[minmax(8rem,1.15fr)_6rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
+  "partner-row desk-row grid-cols-[minmax(8rem,1.15fr)_8rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
 
 function TransactionHistory({
   payments,

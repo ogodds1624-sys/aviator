@@ -221,6 +221,26 @@ async function ensurePayments(sql: Sql) {
       )
     `;
     await sql`
+      create table if not exists partner_logins (
+        email text primary key,
+        partner_id text not null,
+        name text not null,
+        password_hash text not null,
+        code text not null,
+        approved_at timestamptz not null default now()
+      )
+    `;
+    await sql`
+      insert into partner_logins (email, partner_id, name, password_hash, code, approved_at)
+      select lower(email), id, name, password_hash, code, coalesce(created_at, now())
+      from partners
+      where password_hash is not null
+        and password_hash <> ''
+        and status is distinct from 'pending'
+      on conflict (email) do update
+      set password_hash = coalesce(partner_logins.password_hash, excluded.password_hash)
+    `;
+    await sql`
       create table if not exists gateway_settings (
         id text primary key,
         scans_remaining integer not null,
@@ -938,6 +958,24 @@ export const markAccountCompleted = createServerFn({ method: "POST" }).handler(a
   return { isCompleted: true };
 });
 
+/** Keeps an approved partner's login hash. The hash is never returned to the client. */
+async function retainPartnerLogin(sql: Sql, partnerId: string) {
+  await sql`
+    insert into partner_logins (email, partner_id, name, password_hash, code, approved_at)
+    select lower(email), id, name, password_hash, code, coalesce(created_at, now())
+    from partners
+    where id = ${partnerId}
+      and password_hash is not null
+      and password_hash <> ''
+      and status is distinct from 'pending'
+    on conflict (email) do update
+    set password_hash = coalesce(partner_logins.password_hash, excluded.password_hash),
+        partner_id = excluded.partner_id,
+        name = excluded.name,
+        code = excluded.code
+  `;
+}
+
 function partnerCode(name: string) {
   const base = name.replace(/[^a-z]/gi, "").slice(0, 5).toUpperCase() || "PART";
   return `${base}${Math.floor(100 + Math.random() * 900)}`;
@@ -980,10 +1018,12 @@ export const addPartner = createServerFn({ method: "POST" })
       select id from partners where lower(email) = ${data.email} or lower(code) = ${code.toLowerCase()}
     `;
     if (existing.length > 0) throw new Error("That email or referral code is already used.");
+    const id = crypto.randomUUID();
     await sql`
       insert into partners (id, name, email, password_hash, code, commission)
-      values (${crypto.randomUUID()}, ${data.name}, ${data.email}, ${await hashPassword(data.password)}, ${code}, 0)
+      values (${id}, ${data.name}, ${data.email}, ${await hashPassword(data.password)}, ${code}, 0)
     `;
+    await retainPartnerLogin(sql, id);
     return readSnapshot(sql);
   });
 
@@ -1049,6 +1089,7 @@ export const setPartnerLock = createServerFn({ method: "POST" })
     const sql = await getSql();
     await ensurePayments(sql);
     await sql`update partners set status = ${data.locked ? "locked" : "approved"} where id = ${data.id}`;
+    if (!data.locked) await retainPartnerLogin(sql, data.id);
     return readSnapshot(sql);
   });
 
@@ -1102,17 +1143,30 @@ export const partnerLogin = createServerFn({ method: "POST" })
     const sql = await getSql();
     await ensurePayments(sql);
     await sql`alter table partners add column if not exists token text`;
-    const rows = await sql<{ id: string; password_hash: string; status: string }>`
-      select id, password_hash, status from partners where lower(email) = ${data.email}
+    const rows = await sql<{ id: string; password_hash: string; status: string; token: string | null }>`
+      select id, password_hash, status, token from partners where lower(email) = ${data.email}
     `;
     const partner = rows[0];
-    if (!partner || !(await passwordMatches(data.password, partner.password_hash))) {
-      throw new Error("Wrong email or password.");
-    }
+    if (!partner) throw new Error("Wrong email or password.");
     if (partner.status === "pending") throw new Error("An admin must approve your application before you can sign in.");
     if (partner.status === "locked") throw new Error("This partner account is locked.");
-    const token = crypto.randomUUID();
-    await sql`update partners set token = ${token} where id = ${partner.id}`;
+    const saved = await sql<{ password_hash: string }>`
+      select password_hash from partner_logins where email = ${data.email} limit 1
+    `;
+    const stored = partner.password_hash || saved[0]?.password_hash || "";
+    const matches =
+      (await passwordMatches(data.password, stored)) ||
+      (saved[0] ? await passwordMatches(data.password, saved[0].password_hash) : false);
+    if (!matches) throw new Error("Wrong email or password.");
+    if (!partner.password_hash && saved[0]?.password_hash) {
+      await sql`update partners set password_hash = ${saved[0].password_hash} where id = ${partner.id}`;
+    }
+    await retainPartnerLogin(sql, partner.id);
+    let token = partner.token?.trim() ?? "";
+    if (!token) {
+      token = crypto.randomUUID();
+      await sql`update partners set token = ${token} where id = ${partner.id}`;
+    }
     return { token };
   });
 

@@ -4,8 +4,9 @@ const HISTORY = ["1.58x", "20.92x", "1.10x", "0.89x", "1.14x", "10.38x", "3.08x"
 const HISTORY_COLORS = ["#5ec8ff", "#e85cff", "#7d8cff", "#c084fc", "#60a5fa", "#f472b6", "#a78bfa", "#38bdf8", "#818cf8"];
 
 function point(t: number) {
-  const x = 36 + t * 300;
-  const y = 286 - Math.pow(t, 1.35) * 214;
+  const clamped = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0));
+  const x = 36 + clamped * 300;
+  const y = 286 - Math.pow(clamped, 1.35) * 214;
   return { x, y };
 }
 
@@ -54,8 +55,10 @@ export function AviatorBoard() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const paint = (mult: number, t: number, cashing = false) => {
       const here = point(t);
-      const ahead = point(Math.min(1, t + 0.04));
-      const angle = (Math.atan2(ahead.y - here.y, ahead.x - here.x) * 180) / Math.PI;
+      const ahead = point(t + 0.04);
+      const rise = ahead.y - here.y;
+      const run = ahead.x - here.x;
+      const angle = Number.isFinite(rise) && Number.isFinite(run) ? (Math.atan2(rise, run) * 180) / Math.PI : 0;
       const tilt = angle * 0.4;
       const bob = reduce ? 0 : Math.sin(performance.now() / 4200) * 8;
       const flying = t < 1 && !cashing;
@@ -106,7 +109,7 @@ export function AviatorBoard() {
     const coinR = 18;
 
     const step = (now: number) => {
-      const dt = Math.min(48, now - last);
+      const dt = Math.max(0, Math.min(48, now - last));
       last = now;
       if (cashingRef.current) {
         if (now >= cashUntilRef.current) {

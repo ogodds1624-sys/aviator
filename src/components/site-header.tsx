@@ -7,6 +7,11 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 export function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
   const [linked, setLinked] = useState<boolean | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isPending || !user || user.isDevFallback) {
@@ -45,7 +50,7 @@ export function SiteHeader() {
         </span>
       </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {isPending || checking ? (
+        {!mounted || isPending || checking ? (
           <div className="h-9 w-16 animate-pulse rounded-full bg-white/10 sm:w-24" aria-hidden />
         ) : registered ? (
           <div className="text-white">

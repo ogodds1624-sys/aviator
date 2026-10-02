@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { SignalLoading } from "@/components/signal-loading";
-import { TaskSuccess } from "@/components/task-success";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
 import { readPending, savePending } from "@/lib/pending-registration";
 import { openTask } from "@/lib/task-order";
@@ -15,7 +14,6 @@ function CountryPage() {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isTask2Done, setIsTask2Done] = useState(false);
   const stayForContinue = useRef(false);
 
   useEffect(() => {
@@ -35,13 +33,17 @@ function CountryPage() {
   }, [navigate]);
 
   async function chooseCountry(country: "Ghana" | "Nigeria") {
-    if (saving || isTask2Done) return;
+    if (saving) return;
     stayForContinue.current = true;
     setError(null);
     setSaving(true);
     try {
       await savePlayerCountry({ data: { country } });
-      const link = await getSportyLink();
+      let link = await getSportyLink();
+      for (let check = 0; check < 8 && link.country !== country; check += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        link = await getSportyLink();
+      }
       if (link.country !== country) {
         stayForContinue.current = false;
         setError("Could not confirm that country.");
@@ -50,7 +52,7 @@ function CountryPage() {
       const pending = readPending();
       if (pending) savePending({ ...pending, country, completionStatus: false });
       window.localStorage.setItem("aviator-country", country);
-      setIsTask2Done(true);
+      await navigate({ to: "/connect" });
     } catch (err) {
       stayForContinue.current = false;
       setError(err instanceof Error && err.message ? err.message : "Could not save that country.");
@@ -59,24 +61,12 @@ function CountryPage() {
     }
   }
 
-  async function continueToConnect() {
-    if (!isTask2Done) return;
-    const link = await getSportyLink();
-    if (!link.signedIn || (link.country !== "Ghana" && link.country !== "Nigeria")) {
-      stayForContinue.current = false;
-      setIsTask2Done(false);
-      setError("Choose Ghana or Nigeria before continuing.");
-      return;
-    }
-    await navigate({ to: "/connect" });
-  }
-
   function backToRegistration() {
     window.sessionStorage.setItem("aviator-stay-register", "1");
     void navigate({ to: "/register" });
   }
 
-  if (!ready && !isTask2Done) {
+  if (!ready) {
     return (
       <main className="grid min-h-dvh place-items-center bg-ink">
         <SignalLoading />
@@ -90,15 +80,7 @@ function CountryPage() {
         <video className="plane-sky-video" src="/media/plane-sky.mp4" autoPlay muted loop playsInline />
         <div className="plane-sky-shade" />
       </div>
-      {isTask2Done ? (
-        <TaskSuccess
-          title="Country saved"
-          message="Your country is saved. Continue when you are ready to connect SportyBet."
-          ready={isTask2Done}
-          onContinue={() => void continueToConnect()}
-        />
-      ) : (
-        <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
+      <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
           <button
             type="button"
             onClick={backToRegistration}
@@ -150,7 +132,6 @@ function CountryPage() {
             </button>
           </div>
         </section>
-      )}
     </main>
   );
 }

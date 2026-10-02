@@ -25,18 +25,27 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [isTask1Done, setIsTask1Done] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
   const [taken, setTaken] = useState(false);
   const holdTask1 = useRef(false);
   const [stayOnRegister, setStayOnRegister] = useState(false);
   const register = mode === "register";
 
-  async function continueAfterAccount() {
-    let link = await getSportyLink();
-    for (let attempt = 0; attempt < 8 && link.signedIn === false; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      link = await getSportyLink();
+  async function readLink() {
+    try {
+      return await getSportyLink();
+    } catch {
+      return null;
     }
-    if (!link.signedIn) {
+  }
+
+  async function continueAfterAccount() {
+    let link = await readLink();
+    for (let attempt = 0; attempt < 15 && !link?.signedIn; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      link = await readLink();
+    }
+    if (!link?.signedIn) {
       window.sessionStorage.removeItem("aviator-register-connect");
       await navigate({ to: "/" });
       return;
@@ -200,12 +209,16 @@ export function AccountLanding({ mode }: { mode: Mode }) {
 
   async function continueToCountry() {
     if (!isTask1Done) return;
-    let link = await getSportyLink();
-    for (let attempt = 0; attempt < 8 && !link.signedIn; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      link = await getSportyLink();
+    setContinueError(null);
+    let link = await readLink();
+    for (let attempt = 0; attempt < 15 && !link?.signedIn; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      link = await readLink();
     }
-    if (!link.signedIn) return;
+    if (!link?.signedIn) {
+      setContinueError("Registration is saved. Tap Continue again once the session connects.");
+      return;
+    }
     await navigate({ to: "/country" });
   }
 
@@ -220,12 +233,19 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   if (isTask1Done) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
-        <TaskSuccess
-          title="Account created"
-          message="Registration is saved. Continue to the country page."
-          ready={isTask1Done}
-          onContinue={() => void continueToCountry()}
-        />
+        <div className="w-full max-w-md">
+          <TaskSuccess
+            title="Account created"
+            message="Registration is saved. Continue to the country page."
+            ready={isTask1Done}
+            onContinue={() => void continueToCountry()}
+          />
+          {continueError ? (
+            <p className="mt-3 text-center text-sm font-medium text-red" role="alert">
+              {continueError}
+            </p>
+          ) : null}
+        </div>
       </main>
     );
   }

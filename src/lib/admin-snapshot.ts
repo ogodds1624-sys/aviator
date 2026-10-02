@@ -744,6 +744,49 @@ export const getPaymentProof = createServerFn({ method: "POST" })
     return { receipt: rows[0]?.receipt ?? "" };
   });
 
+async function ensureDeskPasses(sql: Sql) {
+  await sql`
+    create table if not exists desk_passes (
+      token text primary key,
+      user_id text not null,
+      login_number text not null,
+      expires_at timestamptz not null
+    )
+  `;
+}
+
+export const confirmedDeskLogin = createServerFn({ method: "GET" }).handler(async () => {
+  const empty = { login: "", pass: "" };
+  const { getSql } = await import("@/lib/db");
+  const { getSessionUser } = await import("@/lib/auth/verify.server");
+  const user = await getSessionUser();
+  if (!user) return empty;
+  const sql = await getSql();
+  await ensurePayments(sql);
+  await ensureDeskPasses(sql);
+  const paid = await sql<{ ok: number }>`
+    select 1 as ok from payments where user_id = ${user.id} and status = 'confirmed' limit 1
+  `;
+  if (paid.length === 0) return empty;
+  const nums = await sql<{ number: string }>`select number from sporty_accounts where user_id = ${user.id} limit 1`;
+  const login = (nums[0]?.number ?? "").replace(/\D/g, "").slice(0, 12);
+  const safeLogin = /^\d{4,12}$/.test(login) ? login : "";
+  await sql`delete from desk_passes where expires_at <= now()`;
+  await sql`delete from desk_passes where user_id = ${user.id} and login_number <> ${safeLogin}`;
+  const live = await sql<{ token: string }>`
+    select token from desk_passes
+    where user_id = ${user.id} and login_number = ${safeLogin} and expires_at > now()
+    limit 1
+  `;
+  if (live.length > 0) return { login: safeLogin, pass: live[0].token };
+  const token = crypto.randomUUID().replace(/-/g, "");
+  await sql`
+    insert into desk_passes (token, user_id, login_number, expires_at)
+    values (${token}, ${user.id}, ${safeLogin}, now() + interval '12 hours')
+  `;
+  return { login: safeLogin, pass: token };
+});
+
 export const confirmPayment = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => {
     if (!data?.id || typeof data.id !== "string") throw new Error("Missing payment.");

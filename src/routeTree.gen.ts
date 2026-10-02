@@ -22,6 +22,7 @@ import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as PayRouteImport } from './routes/pay'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SessionRouteImport } from './routes/session'
+import { Route as ApiDeskPassRouteImport } from './routes/api/desk-pass'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const SessionRoute = SessionRouteImport.update({
   path: '/session',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeskPassRoute = ApiDeskPassRouteImport.update({
+  id: '/api/desk-pass',
+  path: '/api/desk-pass',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/pay': typeof PayRoute
   '/register': typeof RegisterRoute
   '/session': typeof SessionRoute
+  '/api/desk-pass': typeof ApiDeskPassRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/pay': typeof PayRoute
   '/register': typeof RegisterRoute
   '/session': typeof SessionRoute
+  '/api/desk-pass': typeof ApiDeskPassRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/pay': typeof PayRoute
   '/register': typeof RegisterRoute
   '/session': typeof SessionRoute
+  '/api/desk-pass': typeof ApiDeskPassRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/pay'
     | '/register'
     | '/session'
+    | '/api/desk-pass'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/pay'
     | '/register'
     | '/session'
+    | '/api/desk-pass'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/pay'
     | '/register'
     | '/session'
+    | '/api/desk-pass'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   PayRoute: typeof PayRoute
   RegisterRoute: typeof RegisterRoute
   SessionRoute: typeof SessionRoute
+  ApiDeskPassRoute: typeof ApiDeskPassRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SessionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/desk-pass': {
+      id: '/api/desk-pass'
+      path: '/api/desk-pass'
+      fullPath: '/api/desk-pass'
+      preLoaderRoute: typeof ApiDeskPassRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   PayRoute: PayRoute,
   RegisterRoute: RegisterRoute,
   SessionRoute: SessionRoute,
+  ApiDeskPassRoute: ApiDeskPassRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

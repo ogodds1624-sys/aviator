@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PREDICTOR_URL, clearSession, readSession, sessionLeft } from "@/lib/desk-session";
-import { getSportyLink } from "@/lib/admin-snapshot";
+import { confirmedDeskLogin, getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { openTask } from "@/lib/task-order";
 
@@ -16,6 +16,36 @@ function SessionPage() {
   const devFallback = user?.isDevFallback === true;
   const [left, setLeft] = useState<number | null>(null);
   const [mins, setMins] = useState(0);
+  const [desk, setDesk] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    let timer = 0;
+    const look = () => {
+      void confirmedDeskLogin()
+        .then((row) => {
+          if (cancel) return;
+          if (row.pass) {
+            setDesk(
+              `${PREDICTOR_URL}?pass=${encodeURIComponent(row.pass)}&login=${encodeURIComponent(row.login)}`,
+            );
+            return;
+          }
+          setDesk((current) => current ?? PREDICTOR_URL);
+          timer = window.setTimeout(look, 4000);
+        })
+        .catch(() => {
+          if (cancel) return;
+          setDesk((current) => current ?? PREDICTOR_URL);
+          timer = window.setTimeout(look, 4000);
+        });
+    };
+    look();
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (isPending) return;
@@ -56,7 +86,11 @@ function SessionPage() {
         <p className="text-sm text-white/60">{mins} mins</p>
         <p className={"font-mono text-xl font-black " + (total <= 30 ? "text-red" : "text-[#3dde6a]")}>{clock}</p>
       </div>
-      <iframe title="Aviator Predictor" src={PREDICTOR_URL} className="min-h-0 w-full flex-1 border-0 bg-white" />
+      {desk ? (
+        <iframe title="Aviator Predictor" src={desk} className="min-h-0 w-full flex-1 border-0 bg-white" />
+      ) : (
+        <div className="min-h-0 w-full flex-1 bg-white" />
+      )}
     </main>
   );
 }

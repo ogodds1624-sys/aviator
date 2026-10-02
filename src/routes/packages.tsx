@@ -52,7 +52,7 @@ function PackagesPage() {
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: "/register" });
+        void navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
         return;
       }
       if (link.country === "Nigeria") {

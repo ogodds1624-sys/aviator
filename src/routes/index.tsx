@@ -42,7 +42,7 @@ function Home() {
     }
     const link = await getSportyLink();
     if (!link.linked) {
-      await navigate({ to: "/register" });
+      await navigate({ to: link.signedIn && link.country ? "/connect" : "/register" });
       return;
     }
     if (link.country === "Nigeria") {

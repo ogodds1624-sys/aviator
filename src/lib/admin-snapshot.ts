@@ -728,14 +728,21 @@ export const getSportyLink = createServerFn({ method: "GET" }).handler(async () 
   const { getSql } = await import("@/lib/db");
   const { getSessionUser } = await import("@/lib/auth/verify.server");
   const user = await getSessionUser();
-  if (!user) return { linked: false, country: null as "Ghana" | "Nigeria" | null, locked: false, signedIn: false };
+  if (!user) {
+    return { linked: false, country: null as "Ghana" | "Nigeria" | null, locked: false, signedIn: false, completed: false };
+  }
   const sql = await getSql();
   await ensurePayments(sql);
   const linkedRows = await sql<{ user_id: string }>`select user_id from sporty_accounts where user_id = ${user.id}`;
   const countryRows = await sql<{ country: string }>`select country from player_country where user_id = ${user.id}`;
   const country = countryRows[0]?.country === "Nigeria" ? "Nigeria" : countryRows[0]?.country === "Ghana" ? "Ghana" : null;
-  const linked = linkedRows.length > 0;
-  return { linked, country, locked: linked && country != null, signedIn: true };
+  const completedRows = await sql<{ completed: boolean }>`
+    select "isCompleted" as completed from "user" where id = ${user.id} limit 1
+  `;
+  const flag = completedRows[0]?.completed as unknown;
+  const completed = flag === true || flag === "t" || flag === "true" || flag === 1;
+  const linked = linkedRows.length > 0 && completed;
+  return { linked, country, locked: linked && country != null, signedIn: true, completed };
 });
 
 export const savePlayerCountry = createServerFn({ method: "POST" })
@@ -798,6 +805,28 @@ export const saveSportyLink = createServerFn({ method: "POST" })
     `;
     return { linked: true };
   });
+
+export const markAccountCompleted = createServerFn({ method: "POST" }).handler(async () => {
+  const { getSql } = await import("@/lib/db");
+  const { getSessionUser } = await import("@/lib/auth/verify.server");
+  const user = await getSessionUser();
+  if (!user) throw new Error("Sign in before linking SportyBet.");
+  const sql = await getSql();
+  await ensurePayments(sql);
+  const marked = await sql<{ id: string }>`
+    update "user" u
+    set "isCompleted" = true
+    where u.id = ${user.id}
+      and exists (select 1 from sporty_accounts s where s.user_id = u.id)
+      and exists (
+        select 1 from player_country c
+        where c.user_id = u.id and c.country in ('Ghana', 'Nigeria')
+      )
+    returning u.id
+  `;
+  if (!marked[0]?.id) throw new Error("Finish country and SportyBet before opening packages.");
+  return { isCompleted: true };
+});
 
 function partnerCode(name: string) {
   const base = name.replace(/[^a-z]/gi, "").slice(0, 5).toUpperCase() || "PART";

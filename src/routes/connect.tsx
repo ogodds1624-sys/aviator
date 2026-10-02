@@ -1,12 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
-import { getSportyLink } from "@/lib/admin-snapshot";
-import { authClient } from "@/lib/auth/client";
-import { sessionLeft } from "@/lib/desk-session";
+import { getSportyLink, markAccountCompleted, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
 import { sportyNumberMatches } from "@/lib/onboarding-gate";
-import { clearPending, connectHandoffActive, readPending } from "@/lib/pending-registration";
+import { clearPending, readPending } from "@/lib/pending-registration";
 import { rememberReferral } from "@/lib/remember-ref";
 
 export const Route = createFileRoute("/connect")({
@@ -50,7 +48,6 @@ function ConnectPage() {
   const [number, setNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [phase, setPhase] = useState<"form" | "loading" | "done" | "leaving">("form");
   const [country, setCountry] = useState<"Ghana" | "Nigeria">("Ghana");
   const [ready, setReady] = useState(false);
   const nigeria = country === "Nigeria";
@@ -62,61 +59,47 @@ function ConnectPage() {
       if (stop) return;
       if (link.linked) {
         clearPending();
-        void navigate({
-          to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
-        });
+        if (link.country === "Nigeria") {
+          void navigate({ to: "/nigeria-pay" });
+        } else {
+          void navigate({ to: "/packages", search: { stay: 1 } });
+        }
+        return;
+      }
+      if (!link.signedIn) {
+        clearPending();
+        void navigate({ to: "/register" });
         return;
       }
       const pending = readPending();
-      if (connectHandoffActive() && pending?.country && pending.completionStatus === false) {
-        setCountry(pending.country);
-        setReady(true);
+      const stored = window.localStorage.getItem("aviator-country");
+      const next =
+        pending?.country ??
+        link.country ??
+        (stored === "Nigeria" || stored === "Ghana" ? stored : null);
+      if (!next) {
+        void navigate({ to: "/register" });
         return;
       }
-      clearPending();
-      void navigate({ to: link.signedIn ? "/" : "/register" });
+      setCountry(next);
+      setReady(true);
     })();
     return () => {
       stop = true;
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (phase !== "loading") return;
-    const id = window.setTimeout(() => setPhase("done"), 3000);
-    return () => window.clearTimeout(id);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== "done") return;
-    const id = window.setTimeout(() => setPhase("leaving"), 2000);
-    return () => window.clearTimeout(id);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== "leaving") return;
-    const id = window.setTimeout(() => {
-      void navigate({ to: nigeria ? "/nigeria-pay" : "/packages" });
-    }, 2000);
-    return () => window.clearTimeout(id);
-  }, [phase, navigate, nigeria]);
-
-  function abandonRegistration() {
+  function leaveConnect() {
     clearPending();
-    void navigate({ to: "/register" });
+    void navigate({ to: "/" });
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const pending = readPending();
     const digits = number.replace(/\D/g, "");
-    if (!connectHandoffActive() || !pending?.country || pending.completionStatus !== false) {
-      abandonRegistration();
-      return;
-    }
-    if (!sportyNumberMatches(pending.country, digits)) {
+    if (!sportyNumberMatches(country, digits)) {
       setError(
-        pending.country === "Nigeria"
+        country === "Nigeria"
           ? "Enter an 11-digit SportyBet number, starting with 0."
           : "Enter a 10-digit SportyBet number, starting with 0.",
       );
@@ -124,69 +107,33 @@ function ConnectPage() {
     }
     setError(null);
     setBusy(true);
-    const body = {
-      name: pending.name,
-      email: pending.email,
-      password: pending.password,
-      rememberMe: true,
-      country: pending.country,
-      sportyNumber: digits,
-      completionStatus: true as const,
-    };
-    let lastError = "Could not save that account.";
     try {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const response = await fetch("/api/auth/sign-up/email", {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const payload = (await response.json().catch(() => null)) as { message?: string; code?: string } | null;
-          if (response.ok) {
-            clearPending();
-            window.localStorage.setItem("aviator-hack-email", pending.email);
-            window.localStorage.setItem("aviator-country", pending.country);
-            window.localStorage.setItem(STORAGE_KEY, digits);
-            try {
-              await authClient.getSession();
-            } catch {
-              // The session cookie is already set. The next page reads it.
-            }
-            try {
-              await rememberReferral();
-            } catch {
-              // The account is already stored. A referral note must not undo that.
-            }
-            setPhase("loading");
-            return;
-          }
-          const message = payload?.message?.trim() || "";
-          const code = payload?.code ?? "";
-          if (/exist|already|registered|duplicate/i.test(`${message} ${code}`)) {
-            clearPending();
-            window.localStorage.setItem("aviator-hack-email", pending.email);
-            window.sessionStorage.setItem("aviator-email-taken", "1");
-            await navigate({ to: "/login" });
-            return;
-          }
-          lastError = message || "Could not save that account.";
-          if (message && response.status < 500) {
-            setError(lastError);
-            return;
-          }
-        } catch (err) {
-          lastError = err instanceof Error && err.message ? err.message : lastError;
-        }
+      await savePlayerCountry({ data: { country } });
+      await saveSportyLink({ data: { number: digits } });
+      await markAccountCompleted();
+      const pending = readPending();
+      if (pending?.email) window.localStorage.setItem("aviator-hack-email", pending.email);
+      window.localStorage.setItem("aviator-country", country);
+      window.localStorage.setItem(STORAGE_KEY, digits);
+      clearPending();
+      try {
+        await rememberReferral();
+      } catch {
+        // The account is already stored. A referral note must not undo that.
       }
-      setError(lastError);
+      if (country === "Nigeria") {
+        await navigate({ to: "/nigeria-pay" });
+      } else {
+        await navigate({ to: "/packages", search: { stay: 1 } });
+      }
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Could not save that account.");
     } finally {
       setBusy(false);
     }
   }
 
-  if (!ready && phase === "form") {
+  if (!ready) {
     return (
       <main className="grid min-h-dvh place-items-center bg-ink">
         <SignalLoading />
@@ -194,36 +141,13 @@ function ConnectPage() {
     );
   }
 
-  if (phase === "done" || phase === "leaving") {
-    return (
-      <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 text-white">
-        <AviatorSky />
-        {phase === "leaving" ? <SignalLoading /> : null}
-        <section className="relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-black/55 px-6 py-16 text-center">
-          <div className="mark-pop mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-b from-[#4ade80] to-[#16a34a] shadow-[0_8px_16px_rgba(22,163,74,0.35)]">
-            <Check className="size-9 text-white" strokeWidth={3} aria-hidden />
-          </div>
-          <h1 className="mt-8 text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
-            Sporty account connected
-            <br />
-            successfully
-          </h1>
-          <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-muted">
-            Your SportyBet account has been connected. A confirmation email is on its way.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 text-white">
       <AviatorSky />
-      {phase === "loading" ? <SignalLoading /> : null}
       <section className="relative z-10 w-full max-w-md min-w-0 rounded-[28px] border border-white/10 bg-black/55 px-5 py-7">
         <button
           type="button"
-          onClick={abandonRegistration}
+          onClick={leaveConnect}
           className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
         >
           ← BACK

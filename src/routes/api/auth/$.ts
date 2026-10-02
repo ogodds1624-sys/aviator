@@ -27,22 +27,30 @@ async function handleAuth(request: Request): Promise<Response> {
     } catch {
       raw = null;
     }
-    const checked = validateOnboardingBody(raw);
-    if (!checked.ok || checked.completionStatus !== true) {
-      return Response.json(
-        { message: checked.ok ? "Finish registration before creating an account." : checked.message, code: "ONBOARDING_INCOMPLETE" },
-        { status: 400 },
-      );
-    }
-    gate = checked;
+    const record = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
     const headers = new Headers(request.headers);
     headers.delete("content-length");
     headers.delete("transfer-encoding");
-    outbound = new Request(request.url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(checked.authBody),
-    });
+    if (record?.completionStatus === true) {
+      const checked = validateOnboardingBody(raw);
+      if (!checked.ok || checked.completionStatus !== true) {
+        return Response.json(
+          { message: checked.ok ? "Finish registration before creating an account." : checked.message, code: "ONBOARDING_INCOMPLETE" },
+          { status: 400 },
+        );
+      }
+      gate = checked;
+      outbound = new Request(request.url, { method: "POST", headers, body: JSON.stringify(checked.authBody) });
+    } else {
+      const name = typeof record?.name === "string" ? record.name.trim() : "";
+      const email = typeof record?.email === "string" ? record.email.trim() : "";
+      const password = typeof record?.password === "string" ? record.password : "";
+      outbound = new Request(request.url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ name, email, password, rememberMe: record?.rememberMe !== false }),
+      });
+    }
   }
 
   let again = outbound;

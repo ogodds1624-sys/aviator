@@ -788,7 +788,7 @@ export const abandonUnlinkedAccount = createServerFn({ method: "POST" }).handler
 export const saveSportyLink = createServerFn({ method: "POST" })
   .inputValidator((data: { number: string }) => {
     const number = String(data?.number ?? "").replace(/\D/g, "");
-    if (!/^0\d{9,10}$/.test(number)) throw new Error("Enter a valid SportyBet number, starting with 0.");
+    if (!/^\d{9,11}$/.test(number)) throw new Error("Enter a valid SportyBet number.");
     return { number };
   })
   .handler(async ({ data }) => {
@@ -798,6 +798,19 @@ export const saveSportyLink = createServerFn({ method: "POST" })
     if (!user) throw new Error("Sign in before linking SportyBet.");
     const sql = await getSql();
     await ensurePayments(sql);
+    const saved = await sql<{ country: string }>`select country from player_country where user_id = ${user.id}`;
+    const country = saved[0]?.country === "Nigeria" ? "Nigeria" : saved[0]?.country === "Ghana" ? "Ghana" : "";
+    const lengthOk =
+      country === "Nigeria"
+        ? data.number.length === 10 || data.number.length === 11
+        : country === "Ghana" && (data.number.length === 9 || data.number.length === 10);
+    if (!lengthOk) {
+      throw new Error(
+        country === "Nigeria"
+          ? "Enter a 10 or 11 digit SportyBet number."
+          : "Enter a 9 or 10 digit SportyBet number.",
+      );
+    }
     await sql`
       insert into sporty_accounts (user_id, number, linked_at)
       values (${user.id}, ${data.number}, now())

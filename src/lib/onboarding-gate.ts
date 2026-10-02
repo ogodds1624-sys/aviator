@@ -19,7 +19,9 @@ function text(value: unknown) {
 }
 
 export function sportyNumberMatches(country: OnboardingCountry, number: string) {
-  return country === "Nigeria" ? /^0\d{10}$/.test(number) : /^0\d{9}$/.test(number);
+  const digits = number.replace(/\D/g, "");
+  if (country === "Nigeria") return digits.length === 10 || digits.length === 11;
+  return digits.length === 9 || digits.length === 10;
 }
 
 /**
@@ -49,8 +51,8 @@ export function validateOnboardingBody(body: unknown): OnboardingGate {
       ok: false,
       message:
         country === "Nigeria"
-          ? "Enter an 11-digit SportyBet number, starting with 0."
-          : "Enter a 10-digit SportyBet number, starting with 0.",
+          ? "Enter a 10 or 11 digit SportyBet number."
+          : "Enter a 9 or 10 digit SportyBet number.",
     };
   }
   return {

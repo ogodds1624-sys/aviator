@@ -73,6 +73,18 @@ function ConnectPage() {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    if (!isTask3Done) return;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const link = await getSportyLink();
+        if (!link.linked) return;
+        await openTask(navigate, link);
+      })();
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [isTask3Done, navigate]);
+
   function leaveConnect() {
     clearPending();
     void navigate({ to: "/" });
@@ -84,8 +96,8 @@ function ConnectPage() {
     if (!sportyNumberMatches(country, digits)) {
       setError(
         country === "Nigeria"
-          ? "Enter an 11-digit SportyBet number, starting with 0."
-          : "Enter a 10-digit SportyBet number, starting with 0.",
+          ? "Enter a 10 or 11 digit SportyBet number."
+          : "Enter a 9 or 10 digit SportyBet number.",
       );
       return;
     }
@@ -143,7 +155,7 @@ function ConnectPage() {
       {isTask3Done ? (
         <TaskSuccess
           title="Sporty account connected successfully"
-          message="SportyBet is saved. Continue to the package prices."
+          message="SportyBet is connected. Opening your packages."
           ready={isTask3Done}
           onContinue={() => void continueToPackages()}
         />
@@ -180,7 +192,7 @@ function ConnectPage() {
                 id="sportybet"
                 inputMode="numeric"
                 autoComplete="tel"
-                placeholder={nigeria ? "08031234567" : "0244123456"}
+                placeholder={nigeria ? "8031234567" : "244123456"}
                 value={number}
                 onChange={(event) => setNumber(event.target.value)}
                 className="h-14 min-w-0 rounded-2xl border border-line bg-ink px-3 text-base text-white outline-none placeholder:text-white/40"

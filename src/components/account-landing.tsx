@@ -127,7 +127,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   useEffect(() => {
     if (!countryWait) return;
     const id = window.setTimeout(() => {
-      window.sessionStorage.setItem("aviator-connect-once", "1");
       void navigate({ to: "/connect", viewTransition: true });
     }, 2000);
     return () => window.clearTimeout(id);

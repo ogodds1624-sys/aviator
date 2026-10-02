@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
@@ -17,8 +18,10 @@ export const Route = createFileRoute("/pay")({
 
 function PayPage() {
   const navigate = useNavigate();
+  const { user, isPending } = useCurrentUserState();
   const { amount } = Route.useSearch();
   const store = useLiveStorefront();
+  const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -27,10 +30,23 @@ function PayPage() {
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
 
   useEffect(() => {
+    if (isPending) return;
+    if (!user || user.isDevFallback) {
+      setReady(true);
+      return;
+    }
     void getSportyLink().then((link) => {
-      if (link.country === "Nigeria") void navigate({ to: "/nigeria-pay", viewTransition: true });
+      if (!link.linked) {
+        void navigate({ to: "/connect" });
+        return;
+      }
+      if (link.country === "Nigeria") {
+        void navigate({ to: "/nigeria-pay", viewTransition: true });
+        return;
+      }
+      setReady(true);
     });
-  }, [navigate]);
+  }, [isPending, user, navigate]);
 
   useEffect(() => {
     if (!paymentId || result !== "pending") return;
@@ -117,6 +133,14 @@ function PayPage() {
 
   const waitingLabel =
     result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">

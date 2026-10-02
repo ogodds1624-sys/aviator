@@ -32,40 +32,32 @@ function Home() {
   const { ref } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
-  const [linked, setLinked] = useState(false);
-  const [country, setCountry] = useState<"Ghana" | "Nigeria" | null>(null);
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
   const [loading, setLoading] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const [tick, setTick] = useState(0);
 
-  useEffect(() => {
-    if (isPending || !user || user.isDevFallback) {
-      setLinked(false);
-      setCountry(null);
+  async function openPaidDesk() {
+    const link = await getSportyLink();
+    if (!link.linked) {
+      await navigate({ to: "/connect", viewTransition: true });
       return;
     }
-    void getSportyLink()
-      .then((link) => {
-        setLinked(link.linked);
-        setCountry(link.country);
-      })
-      .catch(() => {
-        setLinked(false);
-        setCountry(null);
-      });
-  }, [isPending, user]);
+    if (sessionLeft() > 0) {
+      await navigate({ to: "/session" });
+      return;
+    }
+    if (link.country === "Nigeria") {
+      await navigate({ to: "/nigeria-pay", viewTransition: true });
+      return;
+    }
+    await navigate({ to: "/packages", search: { stay: 1 }, viewTransition: true });
+  }
 
   useEffect(() => {
     if (!loading) return;
     const id = window.setTimeout(() => {
-      void (async () => {
-        const link = await getSportyLink();
-        const picked = link.country === "Nigeria" ? "Nigeria" : "Ghana";
-        if (sessionLeft() > 0) void navigate({ to: "/session" });
-        else if (picked === "Nigeria") void navigate({ to: "/nigeria-pay" });
-        else void navigate({ to: "/packages", search: { stay: 1 } });
-      })();
+      void openPaidDesk();
     }, 3000);
     return () => window.clearTimeout(id);
   }, [loading, navigate]);
@@ -73,28 +65,18 @@ function Home() {
   useEffect(() => {
     if (!signalOpen || isPending) return;
     const id = window.setTimeout(() => {
-      if (signedIn) {
-        void navigate({
-          to: country === "Nigeria" ? "/nigeria-pay" : "/packages",
-          search: country === "Nigeria" ? {} : { stay: 1 },
-          viewTransition: true,
-        });
-      } else {
+      if (!signedIn) {
         void navigate({ to: "/login", viewTransition: true });
+        return;
       }
+      void openPaidDesk();
     }, 2000);
     return () => window.clearTimeout(id);
-  }, [signalOpen, isPending, signedIn, linked, country, navigate]);
+  }, [signalOpen, isPending, signedIn, navigate]);
 
   useEffect(() => {
     if (ref) window.localStorage.setItem("aviator-ref", ref);
   }, [ref]);
-
-  // The SportyBet form is only for the registration step that just set this flag.
-  // Reaching the site again closes that step, so later visits are not sent back.
-  useEffect(() => {
-    window.sessionStorage.removeItem("aviator-connect-once");
-  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((n) => n + 1), 3500);
@@ -107,11 +89,7 @@ function Home() {
       void navigate({ to: "/login", viewTransition: true });
       return;
     }
-    void navigate({
-      to: country === "Nigeria" ? "/nigeria-pay" : "/packages",
-      search: country === "Nigeria" ? {} : { stay: 1 },
-      viewTransition: true,
-    });
+    void openPaidDesk();
   }
 
   function runSignal() {

@@ -59,17 +59,11 @@ function ConnectPage() {
   }, []);
 
   useEffect(() => {
-    const once = window.sessionStorage.getItem("aviator-connect-once") === "1";
     void getSportyLink().then((link) => {
       if (link.linked) {
-        window.sessionStorage.removeItem("aviator-connect-once");
         void navigate({
           to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
         });
-        return;
-      }
-      if (!once) {
-        void navigate({ to: "/" });
         return;
       }
       setReady(true);
@@ -91,7 +85,6 @@ function ConnectPage() {
   useEffect(() => {
     if (phase !== "leaving") return;
     const id = window.setTimeout(() => {
-      window.sessionStorage.removeItem("aviator-connect-once");
       void navigate({ to: nigeria ? "/nigeria-pay" : "/packages" });
     }, 2000);
     return () => window.clearTimeout(id);

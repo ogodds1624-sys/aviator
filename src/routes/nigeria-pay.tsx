@@ -2,6 +2,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, Flame, Gem, X, Zap } from "lucide-react";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
@@ -23,7 +24,9 @@ function naira(amount: number) {
 
 function NigeriaPayPage() {
   const navigate = useNavigate();
+  const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
+  const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState<35000 | 55000 | 75000 | null>(null);
@@ -38,10 +41,23 @@ function NigeriaPayPage() {
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
 
   useEffect(() => {
+    if (isPending) return;
+    if (!user || user.isDevFallback) {
+      setReady(true);
+      return;
+    }
     void getSportyLink().then((link) => {
-      if (link.linked && link.country !== "Nigeria") void navigate({ to: "/packages", viewTransition: true });
+      if (!link.linked) {
+        void navigate({ to: "/connect" });
+        return;
+      }
+      if (link.country !== "Nigeria") {
+        void navigate({ to: "/packages", viewTransition: true });
+        return;
+      }
+      setReady(true);
     });
-  }, [navigate]);
+  }, [isPending, user, navigate]);
 
   useEffect(() => {
     if (amount == null || showPay) return;
@@ -145,6 +161,14 @@ function NigeriaPayPage() {
 
   const waitingLabel =
     result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
+  }
 
   if (amount == null || !showPay) {
     return (

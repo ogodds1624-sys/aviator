@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Flame, Gem, Zap } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink } from "@/lib/admin-snapshot";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { sessionLeft } from "@/lib/desk-session";
 
@@ -36,16 +37,31 @@ const PACKAGES = [
 
 function PackagesPage() {
   const navigate = useNavigate();
+  const { user, isPending } = useCurrentUserState();
   const { rejected, stay } = Route.useSearch();
+  const [ready, setReady] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
   const store = useLiveStorefront();
   const [alertOn, setAlertOn] = useState(Boolean(rejected));
 
   useEffect(() => {
+    if (isPending) return;
+    if (!user || user.isDevFallback) {
+      setReady(true);
+      return;
+    }
     void getSportyLink().then((link) => {
-      if (link.linked && link.country === "Nigeria") void navigate({ to: "/nigeria-pay", viewTransition: true });
+      if (!link.linked) {
+        void navigate({ to: "/connect" });
+        return;
+      }
+      if (link.country === "Nigeria") {
+        void navigate({ to: "/nigeria-pay", viewTransition: true });
+        return;
+      }
+      setReady(true);
     });
-  }, [navigate]);
+  }, [isPending, user, navigate]);
 
   useEffect(() => {
     if (!rejected) return;
@@ -66,6 +82,14 @@ function PackagesPage() {
     }, 2000);
     return () => window.clearTimeout(id);
   }, [pending, navigate]);
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-ink">
+        <SignalLoading />
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">

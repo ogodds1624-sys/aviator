@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PREDICTOR_URL, clearSession, readSession, sessionLeft } from "@/lib/desk-session";
 import { getSportyLink } from "@/lib/admin-snapshot";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const Route = createFileRoute("/session")({
   component: SessionPage,
@@ -9,17 +10,25 @@ export const Route = createFileRoute("/session")({
 
 function SessionPage() {
   const navigate = useNavigate();
+  const { user, isPending } = useCurrentUserState();
   const [left, setLeft] = useState<number | null>(null);
   const [mins, setMins] = useState(0);
 
   useEffect(() => {
+    if (isPending) return;
     const tick = () => {
       const session = readSession();
       const ms = sessionLeft();
       if (!session || ms <= 0) {
         clearSession();
+        if (!user || user.isDevFallback) {
+          void navigate({ to: "/login" });
+          return;
+        }
         void getSportyLink().then((link) => {
-          void navigate({ to: link.country === "Nigeria" ? "/nigeria-pay" : "/packages" });
+          void navigate({
+            to: !link.linked ? "/connect" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
+          });
         });
         return;
       }
@@ -29,7 +38,7 @@ function SessionPage() {
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [navigate]);
+  }, [navigate, isPending, user]);
 
   if (left == null) return null;
   const total = Math.ceil(left / 1000);

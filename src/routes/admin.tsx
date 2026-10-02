@@ -437,7 +437,6 @@ function AdminPage() {
                 <StatCard label="TOTAL MEMBERS" value={String(view.total)} note={`${view.total} connected accounts`} icon={<List className="size-5" />} />
                 <StatCard label="TODAY" value={String(view.today)} note={`${view.today} accounts today`} icon={<List className="size-5" />} />
               </div>
-              <MemberList members={view.members} />
               <div className="stat-grid mt-8">
                 <StatCard label="DAILY GHANA" value={`GHS ${ghanaDaily.toLocaleString("en-GH")}`} note={`${liveDayLabel(ghanaToday, GHANA_TZ)} · resets at midnight`} gold icon={<GhanaFlag />} iconClass="bg-white/10" />
                 <StatCard label="TOTAL GHANA" value={`GHS ${ghanaRevenue.toLocaleString("en-GH")}`} note="Does not reset" gold icon={<GhanaFlag />} iconClass="bg-white/10" />

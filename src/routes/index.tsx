@@ -33,14 +33,35 @@ function Home() {
   const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
+  const [linked, setLinked] = useState(false);
+  const registered = signedIn && linked;
   const [loading, setLoading] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const [tick, setTick] = useState(0);
 
+  useEffect(() => {
+    if (!signedIn) {
+      setLinked(false);
+      return;
+    }
+    let stop = false;
+    void getSportyLink()
+      .then((link) => {
+        if (!stop) setLinked(link.linked);
+      })
+      .catch(() => {
+        if (!stop) setLinked(false);
+      });
+    return () => {
+      stop = true;
+    };
+  }, [signedIn, user]);
+
   async function openPaidDesk() {
     const link = await getSportyLink();
     if (!link.linked) {
-      await navigate({ to: "/connect", viewTransition: true });
+      setLoading(false);
+      setSignalOpen(false);
       return;
     }
     if (sessionLeft() > 0) {
@@ -65,14 +86,18 @@ function Home() {
   useEffect(() => {
     if (!signalOpen || isPending) return;
     const id = window.setTimeout(() => {
-      if (!signedIn) {
-        void navigate({ to: "/login", viewTransition: true });
+      if (!registered) {
+        setSignalOpen(false);
         return;
       }
       void openPaidDesk();
     }, 2000);
     return () => window.clearTimeout(id);
-  }, [signalOpen, isPending, signedIn, navigate]);
+  }, [signalOpen, isPending, registered, navigate]);
+
+  useEffect(() => {
+    window.sessionStorage.removeItem("aviator-register-connect");
+  }, []);
 
   useEffect(() => {
     if (ref) window.localStorage.setItem("aviator-ref", ref);
@@ -85,20 +110,12 @@ function Home() {
 
   function openDesk() {
     if (isPending) return;
-    if (!user || user.isDevFallback) {
-      void navigate({ to: "/login", viewTransition: true });
-      return;
-    }
+    if (!registered) return;
     void openPaidDesk();
   }
 
   function runSignal() {
-    if (loading || isPending) return;
-    if (!signedIn) {
-      const known = window.localStorage.getItem("aviator-hack-email");
-      void navigate({ to: known ? "/login" : "/register", viewTransition: true });
-      return;
-    }
+    if (loading || isPending || !registered) return;
     setLoading(true);
   }
 
@@ -235,7 +252,7 @@ function Home() {
             <button
               type="button"
               onClick={() => {
-                if (!isPending && !signalOpen) setSignalOpen(true);
+                if (!isPending && !signalOpen && registered) setSignalOpen(true);
               }}
               disabled={signalOpen}
               className="buy-pulse flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-gold disabled:opacity-70"

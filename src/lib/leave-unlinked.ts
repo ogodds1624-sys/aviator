@@ -11,6 +11,7 @@ export async function leaveUnlinked() {
     window.localStorage.removeItem("aviator-hack-email");
     window.localStorage.removeItem("aviator-country");
     window.localStorage.removeItem("aviator-hack-sportybet");
+    window.sessionStorage.removeItem("aviator-register-connect");
   } catch {
     // Storage can be blocked in the preview iframe.
   }

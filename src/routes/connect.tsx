@@ -64,9 +64,15 @@ function ConnectPage() {
         const link = await getSportyLink();
         if (stop) return;
         if (link.linked) {
+          window.sessionStorage.removeItem("aviator-register-connect");
           void navigate({
             to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
           });
+          return;
+        }
+        const registering = window.sessionStorage.getItem("aviator-register-connect") === "1";
+        if (!registering) {
+          void navigate({ to: "/" });
           return;
         }
         if (link.signedIn !== false || attempt === 3) {

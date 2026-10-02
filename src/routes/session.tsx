@@ -27,7 +27,7 @@ function SessionPage() {
         }
         void getSportyLink().then((link) => {
           void navigate({
-            to: !link.linked ? "/connect" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
+            to: !link.linked ? "/" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
           });
         });
         return;

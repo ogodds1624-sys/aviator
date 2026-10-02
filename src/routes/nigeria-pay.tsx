@@ -48,7 +48,7 @@ function NigeriaPayPage() {
     }
     void getSportyLink().then((link) => {
       if (!link.linked) {
-        void navigate({ to: "/connect" });
+        void navigate({ to: "/" });
         return;
       }
       if (link.country !== "Nigeria") {

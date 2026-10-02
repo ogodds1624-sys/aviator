@@ -41,7 +41,8 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       await navigate({ to: "/packages", search: { stay: 1 } });
       return;
     }
-    await navigate({ to: "/connect" });
+    window.sessionStorage.removeItem("aviator-register-connect");
+    await navigate({ to: "/" });
   }
 
   useEffect(() => {
@@ -148,6 +149,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   useEffect(() => {
     if (!countryWait) return;
     const id = window.setTimeout(() => {
+      window.sessionStorage.setItem("aviator-register-connect", "1");
       void navigate({ to: "/connect", viewTransition: true });
     }, 2000);
     return () => window.clearTimeout(id);

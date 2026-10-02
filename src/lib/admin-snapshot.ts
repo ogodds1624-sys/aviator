@@ -728,14 +728,14 @@ export const getSportyLink = createServerFn({ method: "GET" }).handler(async () 
   const { getSql } = await import("@/lib/db");
   const { getSessionUser } = await import("@/lib/auth/verify.server");
   const user = await getSessionUser();
-  if (!user) return { linked: false, country: null as "Ghana" | "Nigeria" | null, locked: false };
+  if (!user) return { linked: false, country: null as "Ghana" | "Nigeria" | null, locked: false, signedIn: false };
   const sql = await getSql();
   await ensurePayments(sql);
   const linkedRows = await sql<{ user_id: string }>`select user_id from sporty_accounts where user_id = ${user.id}`;
   const countryRows = await sql<{ country: string }>`select country from player_country where user_id = ${user.id}`;
   const country = countryRows[0]?.country === "Nigeria" ? "Nigeria" : countryRows[0]?.country === "Ghana" ? "Ghana" : null;
   const linked = linkedRows.length > 0;
-  return { linked, country, locked: linked && country != null };
+  return { linked, country, locked: linked && country != null, signedIn: true };
 });
 
 export const savePlayerCountry = createServerFn({ method: "POST" })

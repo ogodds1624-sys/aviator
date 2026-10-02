@@ -30,7 +30,11 @@ export function AccountLanding({ mode }: { mode: Mode }) {
   const register = mode === "register";
 
   async function continueAfterAccount() {
-    const link = await getSportyLink();
+    let link = await getSportyLink();
+    for (let attempt = 0; attempt < 3 && link.signedIn === false; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      link = await getSportyLink();
+    }
     if (link.linked) {
       if (sessionLeft() > 0) {
         await navigate({ to: "/session" });
@@ -39,7 +43,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
       await navigate({ to: link.country === "Nigeria" ? "/nigeria-pay" : "/packages" });
       return;
     }
-    await navigate({ to: "/" });
+    await navigate({ to: "/connect" });
   }
 
   useEffect(() => {
@@ -89,7 +93,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
                 email: trimmed,
                 password,
                 rememberMe: true,
-                callbackURL: "/",
+                callbackURL: "/login",
               });
           if (!result.error) {
             window.localStorage.setItem(REMEMBERED_EMAIL, trimmed);
@@ -98,7 +102,10 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             } catch {
               // The account is already stored. A referral note must not undo that.
             }
-            if (!register) return;
+            if (!register) {
+              await continueAfterAccount();
+              return;
+            }
             holdCountry.current = true;
             setCountryStep(true);
             return;

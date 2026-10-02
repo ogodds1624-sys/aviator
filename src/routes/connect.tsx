@@ -57,15 +57,27 @@ function ConnectPage() {
   }, []);
 
   useEffect(() => {
-    void getSportyLink().then((link) => {
-      if (link.linked) {
-        void navigate({
-          to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
-        });
-        return;
+    let stop = false;
+    void (async () => {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const link = await getSportyLink();
+        if (stop) return;
+        if (link.linked) {
+          void navigate({
+            to: sessionLeft() > 0 ? "/session" : link.country === "Nigeria" ? "/nigeria-pay" : "/packages",
+          });
+          return;
+        }
+        if (link.signedIn !== false || attempt === 3) {
+          setReady(true);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      setReady(true);
-    });
+    })();
+    return () => {
+      stop = true;
+    };
   }, [navigate]);
 
   useEffect(() => {

@@ -87,18 +87,10 @@ function toSql(run: Run): Sql {
 
 function createNeonSql(): Promise<Sql> {
   globalRef.__pgSqlPromise__ ??= (async () => {
-    // Regular Postgres driver: node-postgres (`pg`) — works directly with Neon's
-    // pooled endpoint. One pool per process; warm serverless instances reuse it.
-    const { Pool, types } = await import("pg");
-    types.setTypeParser(OID_INT8, Number);
-    types.setTypeParser(OID_DATE, identity);
-    types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({
-      connectionString: databaseUrl,
-      max: 3,
-      connectionTimeoutMillis: 8000,
-      ssl: /localhost|127\.0\.0\.1/.test(databaseUrl) ? undefined : { rejectUnauthorized: false },
-    });
+    // Same pool Better Auth uses. A second pool (this used to be `max: 3`)
+    // plus the auth pool filled Supabase's session-mode cap of 15 clients.
+    const { getSharedPgPool } = await import("./pg-pool");
+    const pool = getSharedPgPool(databaseUrl as string);
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];

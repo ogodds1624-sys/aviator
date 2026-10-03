@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { enforceCompletedAccount } from "@/lib/completed-account";
+import { PRESS_HOLD_MS } from "@/lib/press-motion";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { SupportChat } from "@/components/support-chat";
 import appCss from "../styles.css?url";
@@ -117,6 +118,35 @@ function TapBounce() {
       clear();
     };
   }, [quiet]);
+
+  useEffect(() => {
+    let held: Element | null = null;
+    let timer = 0;
+    const down = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (!document.body.classList.contains("site-front")) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const raw = event.target;
+      if (!(raw instanceof Element)) return;
+      const control = raw.closest("button, a, [role='button']");
+      if (!control || control === document.body) return;
+      if (control instanceof HTMLButtonElement && control.disabled) return;
+      held?.classList.remove("press-hold");
+      held = control;
+      control.classList.add("press-hold");
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        held?.classList.remove("press-hold");
+        held = null;
+      }, PRESS_HOLD_MS);
+    };
+    document.addEventListener("pointerdown", down);
+    return () => {
+      document.removeEventListener("pointerdown", down);
+      window.clearTimeout(timer);
+      held?.classList.remove("press-hold");
+    };
+  }, []);
   return null;
 }
 

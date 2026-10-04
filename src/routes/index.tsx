@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Plane, Sparkles } from "lucide-react";
+import { ChevronRight, Plane, Sparkles } from "lucide-react";
 import { AviatorBoard } from "@/components/aviator-board";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { getApprovedTestimonies, getSportyLink } from "@/lib/admin-snapshot";
+import { getSportyLink } from "@/lib/admin-snapshot";
 import { clearPending } from "@/lib/pending-registration";
 import { openTask } from "@/lib/task-order";
 import { useLiveStorefront } from "@/lib/storefront-live";
@@ -34,11 +34,6 @@ function Home() {
   const store = useLiveStorefront();
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
   const [tick, setTick] = useState(0);
-  const [testimonies, setTestimonies] = useState<
-    { name: string; place: string; text: string; stars: number }[]
-  >([]);
-  const [testimoniesLoading, setTestimoniesLoading] = useState(true);
-  const [testimoniesError, setTestimoniesError] = useState(false);
 
   async function openAccount() {
     if (isPending) return;
@@ -62,77 +57,38 @@ function Home() {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    let current = true;
-    const loadTestimonies = () => {
-      void getApprovedTestimonies()
-        .then((rows) => {
-          if (!current) return;
-          setTestimonies(rows);
-          setTestimoniesError(false);
-          setTestimoniesLoading(false);
-        })
-        .catch(() => {
-          if (!current) return;
-          setTestimoniesError(true);
-          setTestimoniesLoading(false);
-        });
-    };
-    loadTestimonies();
-    const refreshId = window.setInterval(loadTestimonies, 30000);
-    return () => {
-      current = false;
-      window.clearInterval(refreshId);
-    };
-  }, []);
-
   const rows = [0, 1, 2].map((offset) => CALLS[(tick + offset) % CALLS.length]);
+  const tape = [...CALLS, ...CALLS];
 
   return (
-    <div className="home-theme min-h-dvh text-white">
+    <div className="min-h-dvh bg-ink text-white">
       <SiteHeader />
-      <div className="ticker-band border-y border-red/30 bg-[#170807] py-3">
-        {testimoniesError ? (
-          <p className="text-center text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>
-        ) : testimonies.length ? (
-          <a
-            href="#send-testimony"
-            className="testimony-link block text-inherit no-underline"
-            aria-label="Send your testimony"
-          >
-            <div className="testimony-marquee" aria-label="Approved testimonies">
-              <div className="testimony-marquee-track">
-                {[0, 1].map((copy) => (
-                  <div className="testimony-marquee-group" key={copy} aria-hidden={copy === 1}>
-                    {testimonies.map((item, index) => (
-                      <article className="home-testimony" key={`${copy}-${item.name}-${index}`}>
-                        <p className="text-sm leading-relaxed text-white/90">&ldquo;{item.text}&rdquo;</p>
-                        <span className="text-xs font-extrabold text-gold">{item.name}</span>
-                        {item.place ? <span className="text-xs text-white/55">{item.place}</span> : null}
-                        <span className="sr-only">{item.stars} out of 5 stars</span>
-                        <span aria-hidden="true" className="text-xs text-gold">{"★".repeat(item.stars)}</span>
-                      </article>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </a>
-        ) : (
-          <p className="text-center text-sm font-semibold text-white/75">
-            {testimoniesLoading ? "Loading approved testimonies…" : "Approved testimonies will appear here."}
-          </p>
-        )}
+      <div className="ticker-band bg-red py-2 text-sm font-extrabold">
+        <div className="ticker-track flex w-max gap-8 whitespace-nowrap">
+          {tape.map((call, index) => (
+            <span key={`${call.n}-${index}`} className="inline-flex items-center gap-3">
+              Aviator · Round {call.n} — {call.x} window
+              <span className="size-1.5 rounded-full bg-white/80" />
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="hero-layout hero-glow">
         <div className="hero-copy">
-        <h1 className="casino-title text-[2.35rem] leading-tight font-black tracking-tight">
-          <span>CASINO</span> <span className="casino-title-accent">ROOM</span>
+        <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/70 px-3 py-1.5 text-xs font-extrabold tracking-widest text-gold uppercase">
+          <span className="live-dot size-2 rounded-full bg-red" />
+          Live Aviator Hack
+        </p>
+        <h1 className="hero-title float-loop text-[2.35rem] leading-none font-black tracking-tight">
+          AVIATOR HACK
         </h1>
-        <p className="hero-description-float mt-5 rounded-r-xl border-l-2 border-red bg-black/35 px-4 py-3 text-left text-base leading-7 text-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.18)] sm:text-lg sm:leading-8">
-          Our system tracks live Aviator signals, decodes multiplier patterns, and delivers precise
-          cash-out opportunities before the round finishes
+        <h2 className="float-loop mt-3 text-xl font-extrabold text-gold [animation-delay:1.5s]">
+          Live signal
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-muted">
+          This site reads the live Aviator signal, breaks the multiplier pattern, and hands you the
+          next cash-out window before the plane flies.
         </p>
         {store && store.rates.length > 0 ? (
           <p className="mt-3 text-sm text-muted">
@@ -148,81 +104,108 @@ function Home() {
             GET STARTED
             <Sparkles className="size-4" aria-hidden />
           </button>
+          <button
+            type="button"
+            onClick={() => void openAccount()}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 px-5 text-sm font-bold text-white"
+          >
+            See the desk
+            <ChevronRight className="size-4" aria-hidden />
+          </button>
         </div>
         </div>
 
+      <div className="phone-frame">
+        <span className="absolute top-28 left-3 z-10 h-8 w-1 rounded-l bg-zinc-500" />
+        <span className="absolute top-40 left-3 z-10 h-14 w-1 rounded-l bg-zinc-500" />
+        <span className="absolute top-36 right-3 z-10 h-20 w-1 rounded-r bg-zinc-500" />
+        <div className="rounded-[2.8rem] bg-gradient-to-br from-zinc-400 via-zinc-700 to-black p-[3px] shadow-[0_28px_70px_rgba(0,0,0,0.55)]">
+          <div className="relative overflow-hidden rounded-[2.55rem] bg-black">
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-7 pt-2.5 text-[11px] font-semibold text-white">
+              <span>9:41</span>
+              <span className="flex items-center gap-1">
+                <span className="h-2.5 w-4 rounded-[3px] border border-white">
+                  <span className="block h-full w-3/4 bg-white" />
+                </span>
+              </span>
+            </div>
+            <div className="pointer-events-none absolute top-2 left-1/2 z-30 h-[26px] w-24 -translate-x-1/2 rounded-full bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]" />
+            <div className="pt-8">
+              <AviatorBoard />
+            </div>
+            <div className="flex justify-center bg-[#070707] pt-1 pb-2">
+              <span className="h-1.5 w-32 rounded-full bg-white/85" />
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <main id="desk" className="page-wrap">
         <div className="desk-layout">
-        <article className="predictor-card overflow-hidden rounded-3xl">
+        <article className="overflow-hidden rounded-3xl border border-line bg-ink">
           <div className="relative aspect-[16/10] overflow-hidden bg-[#12081f]">
-            <AviatorBoard />
+            <img
+              src="/media/aviator.webp"
+              alt="Aviator live round"
+              width={960}
+              height={525}
+              className="h-full w-full object-cover"
+              decoding="async"
+              loading="lazy"
+            />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full border border-red/50 bg-black/60 px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">
-              <span className="live-dot live-board-dot size-2.5 rounded-full bg-red" />
+              <span className="live-dot size-2 rounded-full bg-red" />
               LIVE BOARD
             </div>
           </div>
-          <div className="predictor-content">
-            <div className="predictor-heading-row">
-              <div>
-                <h3 className="predictor-title">
-                  Aviator <span>Predictor</span>
-                </h3>
-              </div>
-              <span className="predictor-plane-mark" aria-hidden="true">
-                <Plane className="size-5" />
-              </span>
-            </div>
-            <p className="predictor-description">
+          <div className="px-4 py-4">
+            <h3 className="hero-title text-2xl font-black tracking-tight">Aviator Predictor</h3>
+            <p className="plane-theme mt-2 text-sm leading-relaxed">
               Open the live desk, read the predicted coefficient, and take the cash-out window
               before the plane flies.
             </p>
+            <div className="mt-3 mb-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-gold/35 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
+                Live Signals
+              </span>
+              <span className="rounded-full border border-gold/35 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
+                Predicted Coefficient
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => void openAccount()}
-              className="predictor-cta buy-pulse mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-red text-base font-extrabold text-white"
+              className="buy-pulse flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-gold"
             >
               <span>Start Now</span>
-              <ArrowRight className="size-4" aria-hidden />
             </button>
           </div>
         </article>
 
-        <section className="relative mt-6 overflow-hidden rounded-3xl border border-red/20 bg-gradient-to-br from-[#1a0b0b] via-[#100707] to-black p-4 shadow-[0_20px_60px_rgba(0,0,0,0.3)] sm:p-5">
-          <div className="pointer-events-none absolute -right-12 -top-16 size-48 rounded-full bg-red/10 blur-3xl" />
-          <div className="relative mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold tracking-[0.22em] text-red uppercase">Live signals</p>
-              <h2 className="mt-1 text-lg font-black tracking-tight text-white">Prediction feed</h2>
-              <p className="mt-1 text-xs text-white/50">Recent round cash-out windows</p>
-            </div>
-            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-extrabold tracking-wider text-emerald-300 uppercase">
-              <span className="feed-live-dot relative size-2 rounded-full bg-emerald-300" aria-hidden="true" />
+        <section className="mt-6 rounded-2xl border border-line bg-ink p-3.5">
+          <div className="mb-2.5 flex items-center justify-between text-xs font-extrabold tracking-widest text-muted">
+            <span>PREDICTION FEED</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold tracking-normal normal-case">
+              <span className="live-dot size-2 rounded-full bg-red" />
               Live
             </span>
           </div>
-          <ul className="relative space-y-2.5">
-            {rows.map((row, index) => (
+          <ul className="space-y-2">
+            {rows.map((row) => (
               <li
                 key={row.n}
-                className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.035] px-3 py-3 transition-colors hover:border-red/25 hover:bg-white/[0.06] sm:px-4"
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-panel px-3 py-3"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-red/20 bg-red/10 text-xs font-black tabular-nums text-red">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-sm font-extrabold text-white">
-                    <Plane className="size-3.5 shrink-0 text-gold" aria-hidden />
-                    <span className="truncate">Round {row.n}</span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-bold">
+                    <Plane className="size-4 text-gold" aria-hidden />
+                    Aviator · Round {row.n}
                   </span>
-                  <span className="mt-1 block truncate text-xs text-white/50">{row.label}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{row.label}</span>
                 </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-[9px] font-bold tracking-[0.16em] text-white/35 uppercase">Window</span>
-                  <span className="mt-0.5 block text-lg font-black tabular-nums text-gold">{row.x}</span>
-                </span>
+                <span className="text-base font-extrabold text-gold">{row.x}</span>
               </li>
             ))}
           </ul>

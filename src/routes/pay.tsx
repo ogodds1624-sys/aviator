@@ -173,7 +173,7 @@ function PayPage() {
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
           {selected?.kind === "bank" ? "Pay by bank transfer" : "Pay by MoMo transfer"}
         </h1>
-        <p className="mt-1 text-sm text-white/70">{store?.businessName ?? "Casino"}</p>
+        <p className="mt-1 text-sm text-white/70">{store?.businessName ?? "Aviator Hack"}</p>
         <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#3dde6a]">GHS {amount}</p>
 
         {!store ? (

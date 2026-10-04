@@ -651,7 +651,7 @@ export const getStorefront = createServerFn({ method: "GET" })
       { country: "South Africa", unit: "R", perGhs: snapshot.gateway.southAfrica },
     ].filter((rate) => rate.perGhs > 0);
     return {
-      businessName: checkout.businessName || "Casino",
+      businessName: checkout.businessName || "Aviator Hack",
       whatsapp: checkout.whatsapp,
       email: checkout.email,
       wallets: checkout.momo ? checkout.wallets.filter((wallet) => wallet.number) : [],
@@ -1393,7 +1393,7 @@ export const saveGatewayRates = createServerFn({ method: "POST" })
 
 const DEFAULT_CHECKOUT: GatewayCheckout = {
   currency: "GHS",
-  businessName: "Casino",
+  businessName: "Aviator Hack",
   whatsapp: "",
   email: "",
   paystack: false,
@@ -1462,7 +1462,7 @@ export const saveGatewayCheckout = createServerFn({ method: "POST" })
     if (email && !email.includes("@")) throw new Error("Enter a valid support email.");
     return {
       currency: "GHS",
-      businessName: String(data?.businessName ?? "").trim().slice(0, 80) || "Casino",
+      businessName: String(data?.businessName ?? "").trim().slice(0, 80) || "Aviator Hack",
       whatsapp,
       email,
       paystack: Boolean(data?.paystack),

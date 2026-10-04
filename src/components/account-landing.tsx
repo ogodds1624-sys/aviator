@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { AviatorBrandMark } from "@/components/aviator-brand-mark";
+import { Eye, EyeOff } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -122,6 +121,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               name: trimmedName,
               email: trimmed,
               password,
+              rememberMe: true,
             });
             const created = !result.error || Boolean((result as unknown as { data?: { user?: unknown } }).data?.user);
             if (created) {
@@ -218,32 +218,36 @@ export function AccountLanding({ mode }: { mode: Mode }) {
 
   if (isPending || (user && !user.isDevFallback && !stayOnRegister)) {
     return (
-      <main className="auth-page flex min-h-dvh items-center justify-center">
+      <main className="flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
       </main>
     );
   }
 
   return (
-    <main className="auth-page flex min-h-dvh items-center justify-center px-4 py-8">
-      <section className="auth-card w-full max-w-md rounded-3xl px-5 py-5 text-white">
+    <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
+      <section className="w-full max-w-md rounded-3xl border border-line bg-panel px-5 py-5 text-white">
         <Link
           to="/"
-          className="auth-back-home mb-4"
+          className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25 no-underline"
         >
-          <span className="auth-back-home-icon" aria-hidden="true">
-            <ArrowLeft size={15} strokeWidth={2.5} />
-          </span>
-          <span>Back home</span>
+          ← BACK HOME
         </Link>
         <div className="mt-3 mb-5 flex items-center justify-center gap-2.5">
-          <AviatorBrandMark className="header-plane-mark auth-plane-mark" />
-          <span className="text-xl font-extrabold tracking-tight">CASINO</span>
+          <img
+            src="/media/aviator-mark.webp"
+            decoding="async"
+            alt="Aviator"
+            width="48"
+            height="36"
+            className="brand-mark brand-mark-lg"
+          />
+          <span className="text-xl font-extrabold tracking-tight">AVIATOR HACK</span>
         </div>
-        <h1 className={`auth-heading text-center${register ? " auth-heading-register" : ""}`}>
+        <h1 className="text-center text-2xl font-black tracking-tight">
           {register ? "Create your account" : "Welcome back"}
         </h1>
-        <p className="auth-intro mt-4 mb-5 text-center">
+        <p className="mt-2 mb-5 text-center text-sm leading-relaxed text-white">
           {register
             ? "Register once. This device remembers the login so you can come back anytime."
             : "Use the email and password you registered with. This device keeps you signed in."}

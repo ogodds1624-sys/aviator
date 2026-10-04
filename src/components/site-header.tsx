@@ -1,6 +1,5 @@
 import { memo, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AviatorBrandMark } from "@/components/aviator-brand-mark";
 import { UserButton } from "@/lib/auth/gates";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -37,9 +36,17 @@ export const SiteHeader = memo(function SiteHeader() {
   return (
     <header className="site-header sticky top-0 z-40 bg-ink">
       <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 text-white no-underline">
-        <AviatorBrandMark className="brand-mark header-plane-mark" />
+        <img
+          src="/media/aviator-mark.webp"
+          alt="Aviator"
+          width="36"
+          height="36"
+          decoding="async"
+          fetchPriority="high"
+          className="brand-mark"
+        />
         <span className="truncate text-sm leading-none font-black tracking-tight italic sm:text-base">
-          CASINO <span className="text-red">ROOM</span>
+          AVIATOR <span className="text-red">HACK</span>
         </span>
       </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">

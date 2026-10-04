@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Plane } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -36,17 +37,14 @@ export const SiteHeader = memo(function SiteHeader() {
   return (
     <header className="site-header sticky top-0 z-40 bg-ink">
       <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 text-white no-underline">
-        <img
-          src="/media/aviator-mark.webp"
-          alt="Aviator"
-          width="36"
-          height="36"
-          decoding="async"
-          fetchPriority="high"
-          className="brand-mark"
-        />
+        <span
+          className="brand-mark inline-flex items-center justify-center rounded-xl border border-gold/60 bg-gradient-to-br from-red/30 to-black shadow-[0_0_18px_rgba(226,59,59,0.2)]"
+          aria-hidden="true"
+        >
+          <Plane className="size-5 -rotate-12 text-gold" strokeWidth={2.5} />
+        </span>
         <span className="truncate text-sm leading-none font-black tracking-tight italic sm:text-base">
-          AVIATOR <span className="text-red">HACK</span>
+          CASINO <span className="text-red">ROOM</span>
         </span>
       </Link>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">

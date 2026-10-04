@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useRef } from "react";
+import { memo, useId } from "react";
 
 const HISTORY = ["1.58x", "20.92x", "1.10x", "0.89x", "1.14x", "10.38x", "3.08x", "1.63x", "1.17x"];
 const HISTORY_COLORS = ["#5ec8ff", "#e85cff", "#7d8cff", "#c084fc", "#60a5fa", "#f472b6", "#a78bfa", "#38bdf8", "#818cf8"];
@@ -29,169 +29,12 @@ export const AviatorBoard = memo(function AviatorBoard() {
   const rawId = useId().replace(/:/g, "");
   const rayId = `ray-${rawId}`;
   const fillId = `fill-${rawId}`;
-  const oddsRef = useRef<SVGTextElement>(null);
-  const planeRef = useRef<SVGGElement>(null);
-  const propRef = useRef<SVGGElement>(null);
-  const strokeRef = useRef<SVGPathElement>(null);
-  const fillRef = useRef<SVGPathElement>(null);
-  const cashRef = useRef<SVGTextElement>(null);
-  const betRef = useRef<SVGRectElement>(null);
-  const labelRef = useRef<SVGTextElement>(null);
-  const betGroupRef = useRef<SVGGElement>(null);
-  const coinRef = useRef<SVGGElement>(null);
-  const rootRef = useRef<SVGSVGElement>(null);
-  const flyingRef = useRef(false);
-  const multRef = useRef(1);
-  const tRef = useRef(0);
-  const cashingRef = useRef(false);
-  const cashUntilRef = useRef(0);
-
-  function cashOut() {
-    if (!flyingRef.current || cashingRef.current) return;
-    cashingRef.current = true;
-    cashUntilRef.current = performance.now() + 2000;
-  }
-
-  useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const paint = (mult: number, t: number, cashing = false) => {
-      const here = point(t);
-      const ahead = point(t + 0.04);
-      const rise = ahead.y - here.y;
-      const run = ahead.x - here.x;
-      const angle = Number.isFinite(rise) && Number.isFinite(run) ? (Math.atan2(rise, run) * 180) / Math.PI : 0;
-      const tilt = angle * 0.4;
-      const bob = reduce ? 0 : Math.sin(performance.now() / 4200) * 8;
-      const flying = t < 1 && !cashing;
-      flyingRef.current = flying;
-      if (!cashing) {
-        multRef.current = mult;
-        tRef.current = t;
-      }
-      if (oddsRef.current) oddsRef.current.textContent = `${mult.toFixed(2)}x`;
-      if (cashRef.current) cashRef.current.textContent = (100 * mult).toFixed(2);
-      if (betRef.current) betRef.current.setAttribute("fill", flying || cashing ? "#f0c14d" : "#3dff6a");
-      if (labelRef.current) {
-        labelRef.current.textContent = cashing ? "CASHED" : flying ? "CASH OUT" : "BET";
-        labelRef.current.setAttribute("fill", flying || cashing ? "#000000" : "#083016");
-      }
-      if (cashRef.current) cashRef.current.setAttribute("fill", flying || cashing ? "#3a2a00" : "#083016");
-      if (betGroupRef.current) betGroupRef.current.removeAttribute("transform");
-      if (coinRef.current && !cashing) coinRef.current.setAttribute("opacity", "0");
-      if (strokeRef.current) strokeRef.current.setAttribute("d", curvePath(t));
-      if (fillRef.current) fillRef.current.setAttribute("d", fillPath(t));
-      if (planeRef.current) {
-        planeRef.current.setAttribute(
-          "transform",
-          `translate(${here.x.toFixed(1)} ${(here.y + bob).toFixed(1)}) rotate(${tilt.toFixed(1)})`,
-        );
-      }
-      if (propRef.current) {
-        const spin = ((performance.now() / 18) % 360).toFixed(1);
-        propRef.current.setAttribute("transform", `rotate(${spin} 58 15)`);
-      }
-    };
-
-    if (reduce) {
-      paint(5, 1);
-      return;
-    }
-
-    let onScreen = true;
-    const root = rootRef.current;
-    let observer: IntersectionObserver | undefined;
-    if (root && "IntersectionObserver" in window) {
-      observer = new IntersectionObserver(([entry]) => {
-        onScreen = Boolean(entry?.isIntersecting);
-      });
-      observer.observe(root);
-    }
-    const lowEnd = (navigator.hardwareConcurrency || 8) <= 4;
-    const minGap = lowEnd ? 34 : 0;
-    let lastPaint = 0;
-
-    let flight = 0;
-    const climbMs = 18000;
-    const holdMs = 1400;
-    let last = performance.now();
-    let raf = 0;
-    let coinX = 180;
-    let coinY = 250;
-    let coinVX = 3.4;
-    let coinVY = -4.2;
-    let coinLive = false;
-    const coinR = 18;
-
-    const step = (now: number) => {
-      raf = requestAnimationFrame(step);
-      if (document.hidden || !onScreen) {
-        last = now;
-        return;
-      }
-      if (minGap && now - lastPaint < minGap) return;
-      lastPaint = now;
-      const dt = Math.max(0, Math.min(48, now - last));
-      last = now;
-      if (cashingRef.current) {
-        if (now >= cashUntilRef.current) {
-          cashingRef.current = false;
-          coinLive = false;
-          flight = 0;
-          if (coinRef.current) coinRef.current.setAttribute("opacity", "0");
-        } else {
-          if (!coinLive) {
-            coinLive = true;
-            coinX = 180;
-            coinY = 250;
-            coinVX = 3.4;
-            coinVY = -4.2;
-          }
-          const scale = dt / 16;
-          coinX += coinVX * scale;
-          coinY += coinVY * scale;
-          if (coinX <= coinR) {
-            coinX = coinR;
-            coinVX = Math.abs(coinVX);
-          } else if (coinX >= 360 - coinR) {
-            coinX = 360 - coinR;
-            coinVX = -Math.abs(coinVX);
-          }
-          if (coinY <= coinR + 6) {
-            coinY = coinR + 6;
-            coinVY = Math.abs(coinVY);
-          } else if (coinY >= 292 - coinR) {
-            coinY = 292 - coinR;
-            coinVY = -Math.abs(coinVY);
-          }
-          if (coinRef.current) {
-            const spin = (coinX * 4).toFixed(1);
-            coinRef.current.setAttribute("opacity", "1");
-            coinRef.current.setAttribute("transform", `translate(${coinX.toFixed(1)} ${coinY.toFixed(1)}) rotate(${spin})`);
-          }
-          paint(multRef.current, tRef.current, true);
-          return;
-        }
-      }
-      flight += dt;
-      if (flight >= climbMs + holdMs) flight = 0;
-      const t = Math.min(1, flight / climbMs);
-      const mult = 1 + t * 4;
-      paint(mult, t);
-    };
-
-    paint(1, 0);
-    raf = requestAnimationFrame(step);
-    return () => {
-      cancelAnimationFrame(raf);
-      observer?.disconnect();
-    };
-  }, []);
-
-  const start = point(0);
+  const progress = 0.7;
+  const multiplier = 1 + progress * 4;
+  const position = point(progress);
 
   return (
     <svg
-      ref={rootRef}
       viewBox="0 0 360 470"
       width="360"
       height="470"
@@ -239,17 +82,15 @@ export const AviatorBoard = memo(function AviatorBoard() {
           </text>
         ))}
       </g>
-      <path ref={fillRef} d={fillPath(0.35)} fill={`url(#${fillId})`} />
+      <path d={fillPath(progress)} fill={`url(#${fillId})`} />
       <path
-        ref={strokeRef}
-        d={curvePath(0.35)}
+        d={curvePath(progress)}
         fill="none"
         stroke="#ff4d6a"
         strokeWidth="3"
         strokeLinejoin="round"
       />
       <text
-        ref={oddsRef}
         x="180"
         y="168"
         textAnchor="middle"
@@ -258,9 +99,9 @@ export const AviatorBoard = memo(function AviatorBoard() {
         fontWeight="800"
         fontFamily="Inter, sans-serif"
       >
-        1.00x
+        {multiplier.toFixed(2)}x
       </text>
-      <g ref={planeRef} transform={`translate(${start.x} ${start.y})`}>
+      <g transform={`translate(${position.x} ${position.y})`}>
         <g transform="translate(-30 -16)">
           <path d="M6 16 L16 8 L14 16 L16 24 Z" fill="#b00000" />
           <path d="M14 14 C28 10 46 10 58 15 C46 20 28 20 14 16 Z" fill="#ff1f1f" />
@@ -269,18 +110,11 @@ export const AviatorBoard = memo(function AviatorBoard() {
           <path d="M20 13 L48 13" stroke="#ffd6d6" strokeWidth="1.4" />
           <ellipse cx="40" cy="13" rx="6" ry="3.2" fill="#1c1c1c" />
           <ellipse cx="40" cy="12.2" rx="3" ry="1.4" fill="#7dd3ff" />
-          <g ref={propRef}>
+          <g>
             <ellipse cx="58" cy="15" rx="1.6" ry="8" fill="#ffe4e4" opacity="0.85" />
           </g>
           <circle cx="58" cy="15" r="2.2" fill="#ff2a2a" />
         </g>
-      </g>
-      <g ref={coinRef} opacity="0">
-        <circle r="18" fill="#f0c14d" stroke="#8a6200" strokeWidth="2" />
-        <circle r="12" fill="none" stroke="#fff4c2" strokeWidth="1.6" />
-        <text y="5" textAnchor="middle" fill="#3a2a00" fontSize="14" fontWeight="800" fontFamily="Inter, sans-serif">
-          ₵
-        </text>
       </g>
       <rect y="300" width="360" height="170" fill="#070707" />
       <g fill="#9aa3b8" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="700">
@@ -293,10 +127,9 @@ export const AviatorBoard = memo(function AviatorBoard() {
       </g>
       <g>
         <rect x="16" y="342" width="328" height="108" rx="16" fill="#121212" stroke="rgba(255,255,255,0.06)" />
-        <g ref={betGroupRef} onClick={cashOut} role="button" style={{ cursor: "pointer" }}>
-          <rect ref={betRef} x="214" y="358" width="114" height="56" rx="16" fill="#3dff6a" />
+        <g>
+          <rect x="214" y="358" width="114" height="56" rx="16" fill="#3dff6a" />
           <text
-            ref={cashRef}
             x="271"
             y="378"
             textAnchor="middle"
@@ -305,9 +138,9 @@ export const AviatorBoard = memo(function AviatorBoard() {
             fontWeight="800"
             fontFamily="Inter, sans-serif"
           >
-            100.00
+            {(100 * multiplier).toFixed(2)}
           </text>
-          <text ref={labelRef} x="271" y="396" textAnchor="middle" fill="#083016" fontSize="11" fontWeight="800" fontFamily="Inter, sans-serif">
+          <text x="271" y="396" textAnchor="middle" fill="#083016" fontSize="11" fontWeight="800" fontFamily="Inter, sans-serif">
             BET
           </text>
         </g>

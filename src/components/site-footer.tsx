@@ -199,7 +199,7 @@ export const SiteFooter = memo(function SiteFooter() {
           <Link to="/" className="inline-flex items-center gap-2 text-white no-underline">
             <img src="/media/aviator-mark.webp" alt="" width="36" height="36" decoding="async" loading="lazy" className="size-9" />
             <span className="text-base font-black tracking-tight italic">
-              AVIATOR <span className="text-red">HACK</span>
+              CASINO <span className="text-red">ROOM</span>
             </span>
           </Link>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#8b95a7]">
@@ -275,7 +275,7 @@ export const SiteFooter = memo(function SiteFooter() {
         </section>
       </div>
       <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-[#8b95a7]">
-        Aviator Hack · Predictions for the live desk
+        Casino Room · Predictions for the live desk
       </div>
         </footer>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plane, Sparkles } from "lucide-react";
+import { ArrowRight, Plane, Sparkles } from "lucide-react";
 import { AviatorBoard } from "@/components/aviator-board";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -37,7 +37,6 @@ function Home() {
   const [testimonies, setTestimonies] = useState<
     { name: string; place: string; text: string; stars: number }[]
   >([]);
-  const [activeTestimony, setActiveTestimony] = useState(0);
   const [testimoniesLoading, setTestimoniesLoading] = useState(true);
   const [testimoniesError, setTestimoniesError] = useState(false);
 
@@ -70,7 +69,6 @@ function Home() {
         .then((rows) => {
           if (!current) return;
           setTestimonies(rows);
-          setActiveTestimony((index) => index % Math.max(rows.length, 1));
           setTestimoniesError(false);
           setTestimoniesLoading(false);
         })
@@ -88,36 +86,39 @@ function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    if (testimonies.length < 2) return;
-    const id = window.setInterval(
-      () => setActiveTestimony((index) => (index + 1) % testimonies.length),
-      6000,
-    );
-    return () => window.clearInterval(id);
-  }, [testimonies.length]);
-
   const rows = [0, 1, 2].map((offset) => CALLS[(tick + offset) % CALLS.length]);
-  const testimony = testimonies[activeTestimony];
 
   return (
     <div className="home-theme min-h-dvh text-white">
       <SiteHeader />
-      <div className="ticker-band border-y border-red/30 bg-[#170807] px-4 py-3 text-center" aria-live="polite">
+      <div className="ticker-band border-y border-red/30 bg-[#170807] py-3">
         {testimoniesError ? (
-          <p className="text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>
-        ) : testimony ? (
-          <article className="home-testimony mx-auto max-w-4xl" key={`${testimony.name}-${activeTestimony}`}>
-            <p className="text-sm leading-relaxed text-white/90">&ldquo;{testimony.text}&rdquo;</p>
-            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 text-xs">
-              <span className="font-extrabold text-gold">{testimony.name}</span>
-              {testimony.place ? <span className="text-white/55">{testimony.place}</span> : null}
-              <span className="sr-only">{testimony.stars} out of 5 stars</span>
-              <span aria-hidden="true" className="text-gold">{"★".repeat(testimony.stars)}</span>
+          <p className="text-center text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>
+        ) : testimonies.length ? (
+          <div
+            className="testimony-marquee"
+            role="region"
+            aria-label="Approved testimonies"
+            tabIndex={0}
+          >
+            <div className="testimony-marquee-track">
+              {[0, 1].map((copy) => (
+                <div className="testimony-marquee-group" key={copy} aria-hidden={copy === 1}>
+                  {testimonies.map((item, index) => (
+                    <article className="home-testimony" key={`${copy}-${item.name}-${index}`}>
+                      <p className="text-sm leading-relaxed text-white/90">&ldquo;{item.text}&rdquo;</p>
+                      <span className="text-xs font-extrabold text-gold">{item.name}</span>
+                      {item.place ? <span className="text-xs text-white/55">{item.place}</span> : null}
+                      <span className="sr-only">{item.stars} out of 5 stars</span>
+                      <span aria-hidden="true" className="text-xs text-gold">{"★".repeat(item.stars)}</span>
+                    </article>
+                  ))}
+                </div>
+              ))}
             </div>
-          </article>
+          </div>
         ) : (
-          <p className="text-sm font-semibold text-white/75">
+          <p className="text-center text-sm font-semibold text-white/75">
             {testimoniesLoading ? "Loading approved testimonies…" : "Approved testimonies will appear here."}
           </p>
         )}
@@ -125,32 +126,10 @@ function Home() {
 
       <div className="hero-layout hero-glow">
         <div className="hero-copy">
-        <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/70 px-3 py-1.5 text-xs font-extrabold tracking-widest text-gold uppercase">
-          <span className="live-dot size-2 rounded-full bg-red" />
-          Live Casino
-        </p>
-        <svg className="casino-monster" viewBox="0 0 72 72" aria-hidden="true">
-          <path
-            d="M16 27 10 9l18 10a25 25 0 0 1 16 0L62 9l-6 19a26 26 0 0 1 4 14c0 14-9 23-24 23S12 56 12 42a26 26 0 0 1 4-15Z"
-            fill="#21090c"
-            stroke="#e23b3b"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-          <path d="M17 24 12 13l13 8M55 24l5-11-13 8" fill="none" stroke="#f0c14d" strokeWidth="2" strokeLinejoin="round" />
-          <ellipse cx="27" cy="37" rx="6" ry="7.5" fill="#fff5df" />
-          <ellipse className="monster-pupil" cx="28" cy="37" rx="2.5" ry="3.5" fill="#e23b3b" />
-          <ellipse cx="45" cy="37" rx="6" ry="7.5" fill="#fff5df" />
-          <ellipse className="monster-pupil monster-pupil-late" cx="46" cy="37" rx="2.5" ry="3.5" fill="#e23b3b" />
-          <path d="M25 50q11 10 22 0l-3 9-5-6-4 7-4-7-5 6Z" fill="#f0c14d" stroke="#f0c14d" strokeLinejoin="round" />
-        </svg>
         <h1 className="casino-title text-[2.35rem] leading-tight font-black tracking-tight">
           <span>CASINO</span> <span className="casino-title-accent">ROOM</span>
         </h1>
-        <h2 className="mt-3 text-xl font-extrabold text-gold">
-          Live signal
-        </h2>
-        <p className="mt-5 rounded-r-xl border-l-2 border-red bg-black/35 px-4 py-3 text-left text-base leading-7 text-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.18)] sm:text-lg sm:leading-8">
+        <p className="hero-description-float mt-5 rounded-r-xl border-l-2 border-red bg-black/35 px-4 py-3 text-left text-base leading-7 text-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.18)] sm:text-lg sm:leading-8">
           Our system tracks live Aviator signals, decodes multiplier patterns, and delivers precise
           cash-out opportunities before the round finishes
         </p>
@@ -175,27 +154,38 @@ function Home() {
 
       <main id="desk" className="page-wrap">
         <div className="desk-layout">
-        <article className="overflow-hidden rounded-3xl border border-line bg-ink">
+        <article className="predictor-card overflow-hidden rounded-3xl">
           <div className="relative aspect-[16/10] overflow-hidden bg-[#12081f]">
             <AviatorBoard />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full border border-red/50 bg-black/60 px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">
-              <span className="live-dot size-2 rounded-full bg-red" />
+              <span className="live-dot live-board-dot size-2.5 rounded-full bg-red" />
               LIVE BOARD
             </div>
           </div>
-          <div className="px-4 py-4">
-            <h3 className="hero-title text-2xl font-black tracking-tight">Aviator Predictor</h3>
-            <p className="plane-theme mt-2 text-sm leading-relaxed">
+          <div className="predictor-content">
+            <div className="predictor-heading-row">
+              <div>
+                <p className="predictor-kicker">Your live desk</p>
+                <h3 className="predictor-title">
+                  Aviator <span>Predictor</span>
+                </h3>
+              </div>
+              <span className="predictor-plane-mark" aria-hidden="true">
+                <Plane className="size-5" />
+              </span>
+            </div>
+            <p className="predictor-description">
               Open the live desk, read the predicted coefficient, and take the cash-out window
               before the plane flies.
             </p>
             <button
               type="button"
               onClick={() => void openAccount()}
-              className="buy-pulse mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-white"
+              className="predictor-cta buy-pulse mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-red text-base font-extrabold text-white"
             >
               <span>Start Now</span>
+              <ArrowRight className="size-4" aria-hidden />
             </button>
           </div>
         </article>

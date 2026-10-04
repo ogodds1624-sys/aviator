@@ -95,28 +95,29 @@ function Home() {
         {testimoniesError ? (
           <p className="text-center text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>
         ) : testimonies.length ? (
-          <div
-            className="testimony-marquee"
-            role="region"
-            aria-label="Approved testimonies"
-            tabIndex={0}
+          <a
+            href="#send-testimony"
+            className="testimony-link block text-inherit no-underline"
+            aria-label="Send your testimony"
           >
-            <div className="testimony-marquee-track">
-              {[0, 1].map((copy) => (
-                <div className="testimony-marquee-group" key={copy} aria-hidden={copy === 1}>
-                  {testimonies.map((item, index) => (
-                    <article className="home-testimony" key={`${copy}-${item.name}-${index}`}>
-                      <p className="text-sm leading-relaxed text-white/90">&ldquo;{item.text}&rdquo;</p>
-                      <span className="text-xs font-extrabold text-gold">{item.name}</span>
-                      {item.place ? <span className="text-xs text-white/55">{item.place}</span> : null}
-                      <span className="sr-only">{item.stars} out of 5 stars</span>
-                      <span aria-hidden="true" className="text-xs text-gold">{"★".repeat(item.stars)}</span>
-                    </article>
-                  ))}
-                </div>
-              ))}
+            <div className="testimony-marquee" aria-label="Approved testimonies">
+              <div className="testimony-marquee-track">
+                {[0, 1].map((copy) => (
+                  <div className="testimony-marquee-group" key={copy} aria-hidden={copy === 1}>
+                    {testimonies.map((item, index) => (
+                      <article className="home-testimony" key={`${copy}-${item.name}-${index}`}>
+                        <p className="text-sm leading-relaxed text-white/90">&ldquo;{item.text}&rdquo;</p>
+                        <span className="text-xs font-extrabold text-gold">{item.name}</span>
+                        {item.place ? <span className="text-xs text-white/55">{item.place}</span> : null}
+                        <span className="sr-only">{item.stars} out of 5 stars</span>
+                        <span aria-hidden="true" className="text-xs text-gold">{"★".repeat(item.stars)}</span>
+                      </article>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </a>
         ) : (
           <p className="text-center text-sm font-semibold text-white/75">
             {testimoniesLoading ? "Loading approved testimonies…" : "Approved testimonies will appear here."}
@@ -166,7 +167,6 @@ function Home() {
           <div className="predictor-content">
             <div className="predictor-heading-row">
               <div>
-                <p className="predictor-kicker">Your live desk</p>
                 <h3 className="predictor-title">
                   Aviator <span>Predictor</span>
                 </h3>
@@ -199,7 +199,7 @@ function Home() {
               <p className="mt-1 text-xs text-white/50">Recent round cash-out windows</p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-extrabold tracking-wider text-emerald-300 uppercase">
-              <span className="live-dot size-1.5 rounded-full bg-emerald-400" />
+              <span className="feed-live-dot relative size-2 rounded-full bg-emerald-300" aria-hidden="true" />
               Live
             </span>
           </div>

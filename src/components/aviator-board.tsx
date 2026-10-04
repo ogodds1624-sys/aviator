@@ -1,4 +1,4 @@
-import { memo, useId } from "react";
+import { memo, useEffect, useId, useRef } from "react";
 
 const HISTORY = ["1.58x", "20.92x", "1.10x", "0.89x", "1.14x", "10.38x", "3.08x", "1.63x", "1.17x"];
 const HISTORY_COLORS = ["#5ec8ff", "#e85cff", "#7d8cff", "#c084fc", "#60a5fa", "#f472b6", "#a78bfa", "#38bdf8", "#818cf8"];
@@ -6,7 +6,7 @@ const HISTORY_COLORS = ["#5ec8ff", "#e85cff", "#7d8cff", "#c084fc", "#60a5fa", "
 function point(t: number) {
   const clamped = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0));
   const x = 36 + clamped * 300;
-  const y = 286 - Math.pow(clamped, 1.35) * 214;
+  const y = 214 - Math.pow(clamped, 1.35) * 150;
   return { x, y };
 }
 
@@ -22,24 +22,93 @@ function curvePath(t: number) {
 
 function fillPath(t: number) {
   const end = point(t);
-  return `${curvePath(t)} L${end.x.toFixed(1)} 292 L36 292 Z`;
+  return `${curvePath(t)} L${end.x.toFixed(1)} 222 L36 222 Z`;
 }
 
 export const AviatorBoard = memo(function AviatorBoard() {
   const rawId = useId().replace(/:/g, "");
   const rayId = `ray-${rawId}`;
   const fillId = `fill-${rawId}`;
-  const progress = 0.7;
-  const multiplier = 1 + progress * 4;
-  const position = point(progress);
+  const oddsRef = useRef<SVGTextElement>(null);
+  const planeRef = useRef<SVGGElement>(null);
+  const strokeRef = useRef<SVGPathElement>(null);
+  const fillRef = useRef<SVGPathElement>(null);
+  const rootRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const roundDuration = 42000;
+    const finishPause = 1800;
+    let visible = true;
+    let elapsed = 0;
+    let lastFrame = performance.now();
+    let frameId = 0;
+
+    const paint = (progress: number) => {
+      const multiplier = 1 + progress * 4.99;
+      const position = point(progress);
+      const ahead = point(Math.min(1, progress + 0.01));
+      const tilt = (Math.atan2(ahead.y - position.y, ahead.x - position.x) * 180) / Math.PI * 0.35;
+
+      if (oddsRef.current) oddsRef.current.textContent = `${multiplier.toFixed(2)}x`;
+      if (strokeRef.current) strokeRef.current.setAttribute("d", curvePath(progress));
+      if (fillRef.current) fillRef.current.setAttribute("d", fillPath(progress));
+      if (planeRef.current) {
+        planeRef.current.setAttribute(
+          "transform",
+          `translate(${position.x.toFixed(1)} ${position.y.toFixed(1)}) rotate(${tilt.toFixed(1)})`,
+        );
+      }
+    };
+
+    const step = (now: number) => {
+      frameId = requestAnimationFrame(step);
+      if (document.hidden || !visible || reducedMotion) {
+        lastFrame = now;
+        return;
+      }
+
+      elapsed += Math.min(50, Math.max(0, now - lastFrame));
+      lastFrame = now;
+      const cycleDuration = roundDuration + finishPause;
+      const roundTime = elapsed % cycleDuration;
+      if (roundTime >= roundDuration) {
+        paint(1);
+      } else {
+        const linearProgress = roundTime / roundDuration;
+        const progress = 0.5 - Math.cos(Math.PI * linearProgress) / 2;
+        paint(progress);
+      }
+    };
+
+    const root = rootRef.current;
+    const observer = root && "IntersectionObserver" in window
+      ? new IntersectionObserver(([entry]) => {
+          visible = Boolean(entry?.isIntersecting);
+          lastFrame = performance.now();
+        })
+      : null;
+
+    paint(0);
+    if (reducedMotion) return;
+    if (observer && root) observer.observe(root);
+    frameId = requestAnimationFrame(step);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      observer?.disconnect();
+    };
+  }, []);
 
   return (
     <svg
-      viewBox="0 0 360 470"
+      ref={rootRef}
+      viewBox="0 0 360 225"
       width="360"
-      height="470"
-      className="block h-auto w-full"
-      style={{ aspectRatio: "360 / 470", backgroundColor: "#12081f" }}
+      height="225"
+      preserveAspectRatio="none"
+      className="block h-full w-full"
+      style={{ backgroundColor: "#12081f" }}
       role="img"
       aria-label="Live Aviator odds"
     >
@@ -54,8 +123,8 @@ export const AviatorBoard = memo(function AviatorBoard() {
           <stop offset="100%" stopColor="#ff5a6a" stopOpacity="0.35" />
         </linearGradient>
       </defs>
-      <rect width="360" height="300" fill="#1a0d33" />
-      <rect width="360" height="300" fill={`url(#${rayId})`} />
+      <rect width="360" height="225" fill="#1a0d33" />
+      <rect width="360" height="225" fill={`url(#${rayId})`} />
       {Array.from({ length: 14 }).map((_, i) => (
         <line
           key={i}
@@ -74,7 +143,7 @@ export const AviatorBoard = memo(function AviatorBoard() {
             x={12 + i * 38}
             y="22"
             fill={HISTORY_COLORS[i]}
-            fontSize="11"
+            fontSize="8"
             fontWeight="700"
             fontFamily="Inter, sans-serif"
           >
@@ -82,26 +151,28 @@ export const AviatorBoard = memo(function AviatorBoard() {
           </text>
         ))}
       </g>
-      <path d={fillPath(progress)} fill={`url(#${fillId})`} />
+      <path ref={fillRef} d={fillPath(0)} fill={`url(#${fillId})`} />
       <path
-        d={curvePath(progress)}
+        ref={strokeRef}
+        d={curvePath(0)}
         fill="none"
         stroke="#ff4d6a"
         strokeWidth="3"
         strokeLinejoin="round"
       />
       <text
+        ref={oddsRef}
         x="180"
-        y="168"
+        y="132"
         textAnchor="middle"
         fill="#ffffff"
-        fontSize="54"
+        fontSize="48"
         fontWeight="800"
         fontFamily="Inter, sans-serif"
       >
-        {multiplier.toFixed(2)}x
+        1.00x
       </text>
-      <g transform={`translate(${position.x} ${position.y})`}>
+      <g ref={planeRef} transform={`translate(${point(0).x} ${point(0).y})`}>
         <g transform="translate(-30 -16)">
           <path d="M6 16 L16 8 L14 16 L16 24 Z" fill="#b00000" />
           <path d="M14 14 C28 10 46 10 58 15 C46 20 28 20 14 16 Z" fill="#ff1f1f" />
@@ -115,38 +186,6 @@ export const AviatorBoard = memo(function AviatorBoard() {
           </g>
           <circle cx="58" cy="15" r="2.2" fill="#ff2a2a" />
         </g>
-      </g>
-      <rect y="300" width="360" height="170" fill="#070707" />
-      <g fill="#9aa3b8" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="700">
-        <text x="150" y="326" textAnchor="middle">
-          Bet
-        </text>
-        <text x="210" y="326" textAnchor="middle">
-          Auto
-        </text>
-      </g>
-      <g>
-        <rect x="16" y="342" width="328" height="108" rx="16" fill="#121212" stroke="rgba(255,255,255,0.06)" />
-        <g>
-          <rect x="214" y="358" width="114" height="56" rx="16" fill="#3dff6a" />
-          <text
-            x="271"
-            y="378"
-            textAnchor="middle"
-            fill="#083016"
-            fontSize="13"
-            fontWeight="800"
-            fontFamily="Inter, sans-serif"
-          >
-            {(100 * multiplier).toFixed(2)}
-          </text>
-          <text x="271" y="396" textAnchor="middle" fill="#083016" fontSize="11" fontWeight="800" fontFamily="Inter, sans-serif">
-            BET
-          </text>
-        </g>
-        <text x="90" y="390" textAnchor="middle" fill="#ffffff" fontSize="20" fontWeight="800" fontFamily="Inter, sans-serif">
-          100.00
-        </text>
       </g>
     </svg>
   );

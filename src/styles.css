@@ -295,28 +295,30 @@
 
   .hero-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
     gap: 2rem;
     max-width: 64rem;
     margin-inline: auto;
     padding: 3rem 1.5rem 0.5rem;
-    text-align: left;
+    text-align: center;
   }
 
   .hero-copy h1.casino-title {
-    font-size: clamp(3.25rem, 6vw, 4.5rem);
+    font-size: clamp(2.75rem, 7vw, 4.5rem);
   }
 
   .hero-copy {
-    max-width: none;
+    max-width: 52rem;
+    margin-inline: auto;
   }
 
   .hero-actions {
     flex-direction: row;
     flex-wrap: wrap;
     max-width: none;
-    margin: 1.5rem 0 0;
+    justify-content: center;
+    margin: 1.5rem auto 0;
   }
 
   .hero-actions > * {
@@ -345,7 +347,7 @@
   }
 
   .hero-copy h1.casino-title {
-    font-size: 5.5rem;
+    font-size: clamp(4.5rem, 6vw, 5rem);
   }
 
   .page-wrap {
@@ -440,7 +442,7 @@
 .casino-title {
   color: #fff8f2;
   font-style: italic;
-  font-size: clamp(2.25rem, 8.5vw, 4.75rem);
+  font-size: clamp(2rem, 7.5vw, 5rem);
   letter-spacing: -0.055em;
   line-height: 0.98;
   text-wrap: balance;
@@ -851,19 +853,47 @@ body {
   }
 }
 
-button,
-a,
-summary,
-[role="button"],
-input,
-label {
-  transition: none;
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  transition:
+    transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 180ms ease,
+    opacity 180ms ease;
 }
 
-button:active,
-a:active,
-[role="button"]:active {
-  opacity: 0.82;
+:where(button:not(:disabled):not(.buy-pulse), [role="button"]:not(:disabled)) {
+  animation: button-attention 3.8s ease-in-out infinite;
+}
+
+@keyframes button-attention {
+  0%,
+  18%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 rgba(240, 193, 77, 0));
+  }
+  8% {
+    filter: brightness(1.07) drop-shadow(0 0 8px rgba(240, 193, 77, 0.62));
+  }
+}
+
+@media (hover: hover) {
+  button:not(:disabled):hover,
+  [role="button"]:not(:disabled):hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+}
+
+button:not(:disabled):active,
+[role="button"]:not(:disabled):active {
+  filter: brightness(0.96);
+  transform: translateY(1px) scale(0.985);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -916,6 +946,22 @@ body.site-front .buy-pulse.press-hold {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :where(button:not(:disabled):not(.buy-pulse), [role="button"]:not(:disabled)) {
+    animation: none;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    transition: none;
+  }
+
+  button:not(:disabled):hover,
+  button:not(:disabled):active,
+  [role="button"]:not(:disabled):hover,
+  [role="button"]:not(:disabled):active {
+    transform: none;
+  }
+
   body.site-front button:not(:disabled),
   body.site-front a,
   body.site-front [role="button"] {

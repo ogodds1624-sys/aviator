@@ -321,7 +321,7 @@ function NigeriaPayPage() {
                 1. Transfer <strong>{naira(amount)} NGN</strong> to the account above from your banking app.
               </li>
               <li>
-                2. Attach a <strong>screenshot of the receipt</strong> — your Aviator Hack signal is opened once the payment is
+                2. Attach a <strong>screenshot of the receipt</strong> — your Casino signal is opened once the payment is
                 confirmed.
               </li>
             </ol>

@@ -92,7 +92,7 @@ function rateFields(gateway: GatewaySettings) {
 
 const EMPTY_CHECKOUT: GatewayCheckout = {
   currency: "GHS",
-  businessName: "Aviator Hack",
+  businessName: "Casino",
   whatsapp: "",
   email: "",
   paystack: false,
@@ -375,7 +375,7 @@ function AdminPage() {
         <header className="admin-mobile-nav border-b border-white/10 bg-ink">
           <div className="flex items-center gap-3 px-4 py-3">
             <Diamond className="size-4 shrink-0 fill-red text-red" aria-hidden />
-            <span className="truncate text-lg font-black tracking-tight">Aviator Hack</span>
+            <span className="truncate text-lg font-black tracking-tight">Casino</span>
             <span className="rounded-full border border-red px-2.5 py-1 text-[11px] font-extrabold tracking-wide text-red">ADMIN</span>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3">

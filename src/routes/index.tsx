@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plane, Sparkles } from "lucide-react";
+import { AviatorBoard } from "@/components/aviator-board";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -176,15 +177,7 @@ function Home() {
         <div className="desk-layout">
         <article className="overflow-hidden rounded-3xl border border-line bg-ink">
           <div className="relative aspect-[16/10] overflow-hidden bg-[#12081f]">
-            <img
-              src="/media/aviator.webp"
-              alt="Aviator live round"
-              width={960}
-              height={525}
-              className="h-full w-full object-cover"
-              decoding="async"
-              loading="lazy"
-            />
+            <AviatorBoard />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full border border-red/50 bg-black/60 px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">
               <span className="live-dot size-2 rounded-full bg-red" />
@@ -197,18 +190,10 @@ function Home() {
               Open the live desk, read the predicted coefficient, and take the cash-out window
               before the plane flies.
             </p>
-            <div className="mt-3 mb-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-gold/35 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
-                Live Signals
-              </span>
-              <span className="rounded-full border border-gold/35 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
-                Predicted Coefficient
-              </span>
-            </div>
             <button
               type="button"
               onClick={() => void openAccount()}
-              className="buy-pulse flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-gold"
+              className="buy-pulse mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold text-white"
             >
               <span>Start Now</span>
             </button>

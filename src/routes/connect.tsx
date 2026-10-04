@@ -139,7 +139,7 @@ function ConnectPage() {
           Connect your SportyBet account
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted">
-          Enter your SportyBet account number to link it to Aviator Hack.
+          Enter your SportyBet account number to link it to Casino.
         </p>
         <div className="my-8 flex justify-center">
           <span className="grid size-20 place-items-center rounded-[22px] bg-red text-5xl font-black text-white">

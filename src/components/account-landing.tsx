@@ -121,7 +121,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               name: trimmedName,
               email: trimmed,
               password,
-              rememberMe: true,
             });
             const created = !result.error || Boolean((result as unknown as { data?: { user?: unknown } }).data?.user);
             if (created) {
@@ -242,7 +241,7 @@ export function AccountLanding({ mode }: { mode: Mode }) {
             height="36"
             className="brand-mark brand-mark-lg"
           />
-          <span className="text-xl font-extrabold tracking-tight">AVIATOR HACK</span>
+          <span className="text-xl font-extrabold tracking-tight">CASINO</span>
         </div>
         <h1 className="text-center text-2xl font-black tracking-tight">
           {register ? "Create your account" : "Welcome back"}

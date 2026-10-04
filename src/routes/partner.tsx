@@ -138,7 +138,7 @@ function PartnersPage() {
         <section className="menu-pop w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#111111] text-white">
           <div className="px-6 pt-8 text-center">
             <Diamond className="mx-auto size-7 fill-red text-red" aria-hidden />
-            <h1 className="mt-4 text-3xl font-black tracking-tight">AVIATOR HACK</h1>
+            <h1 className="mt-4 text-3xl font-black tracking-tight">CASINO</h1>
             <p className="mt-2 text-xs font-extrabold tracking-[0.22em] text-red">PARTNER ACCESS</p>
           </div>
           <div className="mt-8 grid grid-cols-2 text-sm font-extrabold tracking-wide">

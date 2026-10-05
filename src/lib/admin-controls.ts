@@ -42,3 +42,23 @@ export async function readBlockedIds(sql: Sql) {
   const rows = await sql<{ user_id: string }>`select user_id from blocked_users`;
   return new Set(rows.map((row) => row.user_id));
 }
+
+export async function ensureRevenueReset(sql: Sql) {
+  await sql`create table if not exists revenue_reset (id text primary key, reset_at timestamptz not null)`;
+}
+
+export async function readRevenueResetAt(sql: Sql): Promise<string | null> {
+  await ensureRevenueReset(sql);
+  const rows = await sql<{ reset_at: string | Date }>`select reset_at from revenue_reset where id = 'main'`;
+  if (!rows[0]) return null;
+  const at = rows[0].reset_at instanceof Date ? rows[0].reset_at : new Date(rows[0].reset_at);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
+export async function resetRevenueNow(sql: Sql) {
+  await ensureRevenueReset(sql);
+  await sql`
+    insert into revenue_reset (id, reset_at) values ('main', now())
+    on conflict (id) do update set reset_at = now()
+  `;
+}

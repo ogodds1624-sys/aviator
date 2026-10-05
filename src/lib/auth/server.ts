@@ -242,7 +242,7 @@ export const auth = betterAuth({
       create: {
         before: async (session: { userId: string }) => {
           const { getSql } = await import("../db");
-          const { isUserBlocked, BLOCKED_MESSAGE } = await import("../blocked-users");
+          const { isUserBlocked, BLOCKED_MESSAGE } = await import("../admin-controls");
           if (await isUserBlocked(await getSql(), session.userId)) {
             throw new APIError("FORBIDDEN", { message: BLOCKED_MESSAGE });
           }

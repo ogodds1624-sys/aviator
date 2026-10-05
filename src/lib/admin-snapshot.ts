@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
-import { readBlockedIds, readBlockedUsers, setUserBlocked } from "@/lib/blocked-users";
+import { readBlockedIds, readBlockedUsers, readRevenueResetAt, resetRevenueNow, setUserBlocked } from "@/lib/admin-controls";
 
 // Owner's own account: payments stay visible in the admin list but are not counted in revenue.
 const OWNER_TEST_EMAILS = new Set(["betboro001@gmail.com"]);
@@ -25,6 +25,7 @@ export type AdminPayment = {
   memberEmail: string | null;
   hasReceipt: boolean;
   countsRevenue: boolean;
+  revenueCleared: boolean;
   confirmedAt: string;
   referredBy: string | null;
   country: "Ghana" | "Nigeria" | null;
@@ -88,6 +89,7 @@ export type AdminTestimony = {
 
 export type AdminSnapshot = {
   members: AdminMember[];
+  revenueResetAt: string | null;
   blockedUsers: { id: string; email: string }[];
   payments: AdminPayment[];
   partners: AdminPartner[];
@@ -424,6 +426,8 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     left join player_country c on c.user_id = p.user_id
     order by p.created_at desc
   `;
+  const revenueResetAt = await readRevenueResetAt(sql);
+  const resetAt = revenueResetAt ? new Date(revenueResetAt).getTime() : null;
   const payments: AdminPayment[] = paymentRows.map((row) => {
     const created = row.created_at instanceof Date ? row.created_at : new Date(row.created_at);
     const confirmed = row.confirmed_at instanceof Date ? row.confirmed_at : new Date(row.confirmed_at ?? "");
@@ -439,7 +443,9 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       hasReceipt: row.has_receipt === true || row.has_receipt === "t" || row.has_receipt === "true",
       countsRevenue:
         !(row.counts_revenue === false || row.counts_revenue === "f" || row.counts_revenue === "false") &&
-        !OWNER_TEST_EMAILS.has((row.member_email ?? "").trim().toLowerCase()),
+        !OWNER_TEST_EMAILS.has((row.member_email ?? "").trim().toLowerCase()) &&
+        !(resetAt !== null && !Number.isNaN(confirmed.getTime()) && confirmed.getTime() < resetAt),
+      revenueCleared: resetAt !== null && !Number.isNaN(confirmed.getTime()) && confirmed.getTime() < resetAt,
       confirmedAt: Number.isNaN(confirmed.getTime()) ? "" : confirmed.toISOString(),
       referredBy: row.referred_by,
       country: row.country === "Nigeria" ? "Nigeria" : row.country === "Ghana" ? "Ghana" : null,
@@ -557,6 +563,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   });
   return {
     members,
+    revenueResetAt,
     blockedUsers: await readBlockedUsers(sql),
     payments,
     partners,
@@ -664,6 +671,14 @@ export const setMemberBlockedByEmail = createServerFn({ method: "POST" })
     await setUserBlocked(sql, rows[0].id, data.blocked);
     return readSnapshot(sql);
   });
+
+export const resetRevenue = createServerFn({ method: "POST" }).handler(async (): Promise<AdminSnapshot> => {
+  const { getSql } = await import("@/lib/db");
+  const sql = await getSql();
+  await ensurePayments(sql);
+  await resetRevenueNow(sql);
+  return readSnapshot(sql);
+});
 
 export const getAdminSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<AdminSnapshot> => {
   const { getSql } = await import("@/lib/db");

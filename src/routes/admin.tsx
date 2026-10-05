@@ -19,6 +19,7 @@ import {
   setPartnerCommission,
   setPartnerLock,
   setMemberBlocked,
+  resetRevenue,
   setMemberBlockedByEmail,
   setTestimonyStatus,
   type AdminSnapshot,
@@ -114,6 +115,7 @@ const EMPTY_CHECKOUT: GatewayCheckout = {
 
 const EMPTY_SNAPSHOT: AdminSnapshot = {
   members: [],
+  revenueResetAt: null,
   blockedUsers: [],
   payments: [],
   partners: [],
@@ -265,6 +267,15 @@ function AdminPage() {
     setSpinning(true);
     try {
       setSnapshot(await setMemberBlocked({ data: { id, blocked } }));
+    } finally {
+      setSpinning(false);
+    }
+  }
+
+  async function resetRevenueTotals() {
+    setSpinning(true);
+    try {
+      setSnapshot(await resetRevenue());
     } finally {
       setSpinning(false);
     }
@@ -454,14 +465,33 @@ function AdminPage() {
               </div>
               <div className="stat-grid mt-8">
                 <StatCard label="DAILY GHANA" value={`GHS ${ghanaDaily.toLocaleString("en-GH")}`} note={`${liveDayLabel(ghanaToday, GHANA_TZ)} · resets at midnight`} gold icon={<GhanaFlag />} iconClass="bg-white/10" />
-                <StatCard label="TOTAL GHANA" value={`GHS ${ghanaRevenue.toLocaleString("en-GH")}`} note="Does not reset" gold icon={<GhanaFlag />} iconClass="bg-white/10" />
+                <StatCard label="TOTAL GHANA" value={`GHS ${ghanaRevenue.toLocaleString("en-GH")}`} note="Since last reset" gold icon={<GhanaFlag />} iconClass="bg-white/10" />
               </div>
               <WeekRevenue payments={view.payments} country="Ghana" />
               <div className="stat-grid mt-4">
                 <StatCard label="DAILY NIGERIA" value={`₦${nigeriaDaily.toLocaleString("en-NG")}`} note={`${liveDayLabel(nigeriaToday, NIGERIA_TZ)} · resets at midnight`} icon={<NigeriaFlag />} iconClass="bg-white/10" />
-                <StatCard label="TOTAL NIGERIA" value={`₦${nigeriaRevenue.toLocaleString("en-NG")}`} note="Does not reset" icon={<NigeriaFlag />} iconClass="bg-white/10" />
+                <StatCard label="TOTAL NIGERIA" value={`₦${nigeriaRevenue.toLocaleString("en-NG")}`} note="Since last reset" icon={<NigeriaFlag />} iconClass="bg-white/10" />
               </div>
               <WeekRevenue payments={view.payments} country="Nigeria" />
+              <section className="mt-6 flex flex-col gap-3 rounded-3xl border border-white/10 bg-[#111111] px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-black">Reset revenue</h3>
+                  <p className="mt-1 text-sm text-[#9aa3b2]">
+                    Sets daily and total revenue for Ghana and Nigeria back to zero. Payments and receipts are kept.
+                    {view.revenueResetAt ? ` Last reset: ${new Date(view.revenueResetAt).toLocaleString("en-GB")}.` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={spinning}
+                  onClick={() => {
+                    if (window.confirm("Reset daily and total revenue to zero for Ghana and Nigeria? Payment records are kept.")) void resetRevenueTotals();
+                  }}
+                  className="h-12 shrink-0 rounded-xl border border-[#e5484d] px-5 text-sm font-extrabold text-[#ff7b80] disabled:opacity-60"
+                >
+                  RESET TO ZERO
+                </button>
+              </section>
               <TestimonyDesk rows={view.testimonies} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
             </>
           ) : tab === "transactions" ? (
@@ -1045,7 +1075,7 @@ function TransactionHistory({
               </div>
               <div className="flex flex-col items-center gap-2">
                 <span className={payment.status === "confirmed" ? "pill-active" : "pill-unpaid"}>
-                  {payment.status === "confirmed" ? (payment.countsRevenue ? "RECEIVED" : "RECEIVED · TEST") : payment.status === "rejected" ? "REJECTED" : "PENDING"}
+                  {payment.status === "confirmed" ? (payment.countsRevenue || payment.revenueCleared ? "RECEIVED" : "RECEIVED · TEST") : payment.status === "rejected" ? "REJECTED" : "PENDING"}
                 </span>
                 {payment.status === "pending" ? (
                   <>

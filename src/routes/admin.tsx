@@ -285,7 +285,7 @@ function AdminPage() {
 
   if (!unlocked) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
+      <main className="hero-glow flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
         <form autoComplete="off" onSubmit={unlock} className="menu-pop w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
           <div className="mx-auto grid size-16 place-items-center rounded-full border border-red/40 bg-red/15">
             <Lock className="size-7 text-gold" aria-hidden />

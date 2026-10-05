@@ -2,8 +2,8 @@ export const PREDICTOR_URL = "https://baker-king-acre-ivory.grok.me";
 const KEY = "aviator-session";
 
 export function minutesFor(amount: number) {
-  if (amount === 555 || amount === 500 || amount === 75000) return 7;
-  if (amount === 455 || amount === 400 || amount === 55000) return 5;
+  if (amount === 555 || amount === 500 || amount === 85000) return 7;
+  if (amount === 455 || amount === 400 || amount === 75000) return 5;
   return 3;
 }
 
@@ -34,3 +34,4 @@ export function sessionLeft() {
   if (!session) return 0;
   return Math.max(0, session.endsAt - Date.now());
 }
+

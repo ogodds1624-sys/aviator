@@ -17,9 +17,9 @@ export const Route = createFileRoute("/nigeria-pay")({
 });
 
 const PACKAGES = [
-  { price: 35000, detail: "3 mins per session", icon: Zap },
-  { price: 55000, detail: "5 mins per session", icon: Flame },
-  { price: 75000, detail: "7 mins per session", icon: Gem },
+  { price: 50000, detail: "3 mins per session", icon: Zap },
+  { price: 75000, detail: "5 mins per session", icon: Flame },
+  { price: 85000, detail: "7 mins per session", icon: Gem },
 ] as const;
 
 function naira(amount: number) {
@@ -35,7 +35,7 @@ function NigeriaPayPage() {
   const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
-  const [amount, setAmount] = useState<35000 | 55000 | 75000 | null>(null);
+  const [amount, setAmount] = useState<50000 | 75000 | 85000 | null>(null);
   const [showPay, setShowPay] = useState(false);
   const [copied, setCopied] = useState(false);
   const [receiptName, setReceiptName] = useState("");
@@ -378,3 +378,4 @@ function NigeriaPayPage() {
     </main>
   );
 }
+

@@ -51,13 +51,13 @@ const PACKAGE_NOTE: Record<number, string> = {
   355: "3 mins per session",
   455: "5 mins per session",
   555: "7 mins per session",
-  35000: "3 mins per session",
-  55000: "5 mins per session",
-  75000: "7 mins per session",
+  50000: "3 mins per session",
+  75000: "5 mins per session",
+  85000: "7 mins per session",
 };
 
 function moneyLabel(amount: number) {
-  return amount === 35000 || amount === 55000 || amount === 75000
+  return amount === 50000 || amount === 75000 || amount === 85000
     ? `₦${amount.toLocaleString("en-NG")}`
     : `GHS ${amount.toLocaleString("en-GH")}`;
 }
@@ -259,7 +259,7 @@ function AdminPage() {
   }
 
   const view = snapshot ?? EMPTY_SNAPSHOT;
-  const nairaAmount = (amount: number) => amount === 35000 || amount === 55000 || amount === 75000;
+  const nairaAmount = (amount: number) => amount === 50000 || amount === 75000 || amount === 85000;
   const now = new Date();
   const ghanaToday = dayKeyInZone(now, GHANA_TZ);
   const nigeriaToday = dayKeyInZone(now, NIGERIA_TZ);
@@ -1015,7 +1015,7 @@ function TransactionHistory({
                 <p className="text-sm text-[#6b7280]">{PACKAGE_NOTE[payment.amount] ?? ""}</p>
               </div>
               <div className="min-w-0">
-                {(payment.country === "Nigeria" || (!payment.country && (payment.amount === 35000 || payment.amount === 55000 || payment.amount === 75000))) ? (
+                {(payment.country === "Nigeria" || (!payment.country && (payment.amount === 50000 || payment.amount === 75000 || payment.amount === 85000))) ? (
                   payment.hasReceipt ? (
                     <button type="button" disabled={opening === payment.id} onClick={() => void openProof(payment.id)} className="rounded-lg border border-[#86d4a0] px-2 py-1 text-[10px] font-extrabold text-[#7ddea0] disabled:opacity-60">
                       {opening === payment.id ? "Opening…" : "Open picture"}
@@ -1200,7 +1200,7 @@ function WeekRevenue({ payments, country }: { payments: AdminSnapshot["payments"
     const id = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(id);
   }, []);
-  const nairaAmount = (amount: number) => amount === 35000 || amount === 55000 || amount === 75000;
+  const nairaAmount = (amount: number) => amount === 50000 || amount === 75000 || amount === 85000;
   const timeZone = country === "Nigeria" ? NIGERIA_TZ : GHANA_TZ;
   const todayKey = dayKeyInZone(now, timeZone);
   const rows = Array.from({ length: 7 }, (_, index) => {
@@ -1260,3 +1260,4 @@ function StatCard({
     </article>
   );
 }
+

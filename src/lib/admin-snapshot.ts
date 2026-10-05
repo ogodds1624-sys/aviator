@@ -595,6 +595,8 @@ export const submitTestimony = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { getSql } = await import("@/lib/db");
+    const { getSessionUser } = await import("@/lib/auth/verify.server");
+    if (!(await getSessionUser())) throw new Error("Register or sign in to send a testimony.");
     const sql = await getSql();
     await ensurePayments(sql);
     await sql`

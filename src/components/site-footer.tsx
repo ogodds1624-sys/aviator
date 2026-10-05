@@ -25,6 +25,7 @@ export const SiteFooter = memo(function SiteFooter() {
   const devFallback = user?.isDevFallback === true;
   const [linked, setLinked] = useState(false);
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback && linked;
+  const registered = !isPending && Boolean(user) && !devFallback;
   const store = useLiveStorefront();
   const whatsapp = store?.whatsapp ?? "";
   const storiesRef = useRef<HTMLElement>(null);
@@ -130,14 +131,26 @@ export const SiteFooter = memo(function SiteFooter() {
         </div>
         )}
         <div className="mx-auto mt-4 w-full max-w-md px-4">
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-red px-4 text-xs font-extrabold tracking-wide text-white"
-          >
-            SEND YOUR TESTIMONY
-          </button>
-          {open ? (
+          {registered ? (
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-red px-4 text-xs font-extrabold tracking-wide text-white"
+            >
+              SEND YOUR TESTIMONY
+            </button>
+          ) : (
+            <>
+              <Link
+                to="/register"
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-red px-4 text-xs font-extrabold tracking-wide text-white no-underline"
+              >
+                REGISTER TO SEND A TESTIMONY
+              </Link>
+              <p className="mt-2 text-xs text-[#8b95a7]">Only registered users can send a testimony.</p>
+            </>
+          )}
+          {open && registered ? (
             <form onSubmit={(event) => void onSubmit(event)} className="mt-3 rounded-2xl border border-white/10 bg-[#111111] px-4 py-4">
               <label className="block text-xs font-bold tracking-[0.14em] text-[#9aa3b2]">
                 NAME

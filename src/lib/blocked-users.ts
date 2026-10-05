@@ -28,6 +28,15 @@ export async function setUserBlocked(sql: Sql, userId: string, blocked: boolean)
   }
 }
 
+export async function readBlockedUsers(sql: Sql) {
+  await ensureBlockedUsers(sql);
+  return sql<{ id: string; email: string }>`
+    select b.user_id as id, u.email as email
+    from blocked_users b join "user" u on u.id = b.user_id
+    order by b.blocked_at desc
+  `;
+}
+
 export async function readBlockedIds(sql: Sql) {
   await ensureBlockedUsers(sql);
   const rows = await sql<{ user_id: string }>`select user_id from blocked_users`;

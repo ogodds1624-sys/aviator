@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
-import { readBlockedIds, setUserBlocked } from "@/lib/blocked-users";
+import { readBlockedIds, readBlockedUsers, setUserBlocked } from "@/lib/blocked-users";
 
 // Owner's own account: payments stay visible in the admin list but are not counted in revenue.
 const OWNER_TEST_EMAILS = new Set(["betboro001@gmail.com"]);
@@ -88,6 +88,7 @@ export type AdminTestimony = {
 
 export type AdminSnapshot = {
   members: AdminMember[];
+  blockedUsers: { id: string; email: string }[];
   payments: AdminPayment[];
   partners: AdminPartner[];
   testimonies: AdminTestimony[];
@@ -556,6 +557,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   });
   return {
     members,
+    blockedUsers: await readBlockedUsers(sql),
     payments,
     partners,
     testimonies,
@@ -644,6 +646,22 @@ export const setMemberBlocked = createServerFn({ method: "POST" })
     const sql = await getSql();
     await ensurePayments(sql);
     await setUserBlocked(sql, data.id, data.blocked);
+    return readSnapshot(sql);
+  });
+
+export const setMemberBlockedByEmail = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; blocked: boolean }) => {
+    const email = data?.email?.trim().toLowerCase() ?? "";
+    if (!email.includes("@")) throw new Error("Enter a valid email.");
+    return { email, blocked: Boolean(data.blocked) };
+  })
+  .handler(async ({ data }) => {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    await ensurePayments(sql);
+    const rows = await sql<{ id: string }>`select id from "user" where lower(email) = ${data.email} limit 1`;
+    if (!rows[0]) throw new Error("No account uses that email.");
+    await setUserBlocked(sql, rows[0].id, data.blocked);
     return readSnapshot(sql);
   });
 

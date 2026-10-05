@@ -19,6 +19,7 @@ import {
   setPartnerCommission,
   setPartnerLock,
   setMemberBlocked,
+  setMemberBlockedByEmail,
   setTestimonyStatus,
   type AdminSnapshot,
   type AdminTestimony,
@@ -113,6 +114,7 @@ const EMPTY_CHECKOUT: GatewayCheckout = {
 
 const EMPTY_SNAPSHOT: AdminSnapshot = {
   members: [],
+  blockedUsers: [],
   payments: [],
   partners: [],
   testimonies: [],
@@ -467,6 +469,7 @@ function AdminPage() {
           ) : tab === "members" ? (
             <div className="mt-8">
               <MemberList members={view.members} busy={spinning} onToggleBlock={(id, blocked) => void toggleBlocked(id, blocked)} />
+              <BlockByEmail blocked={view.blockedUsers} onChange={setSnapshot} />
             </div>
           ) : tab === "partners" ? (
             <PartnerDesk partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
@@ -1168,6 +1171,73 @@ function MemberList({
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+function BlockByEmail({ blocked, onChange }: { blocked: AdminSnapshot["blockedUsers"]; onChange: (snapshot: AdminSnapshot) => void }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  async function submit(address: string, block: boolean) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      onChange(await setMemberBlockedByEmail({ data: { email: address, blocked: block } }));
+      setMessage({ text: `${address.trim().toLowerCase()} ${block ? "is blocked from logging in." : "can log in again."}`, ok: true });
+      if (block) setEmail("");
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : "Could not update that account.", ok: false });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] px-4 py-5">
+      <h2 className="text-2xl font-black">Block a user</h2>
+      <p className="mt-1 text-sm text-[#9aa3b2]">Type the account email. A blocked user is signed out and cannot log in until unblocked.</p>
+      <form
+        className="mt-4 flex flex-col gap-3 sm:flex-row"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (email.trim()) void submit(email, true);
+        }}
+      >
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="user@example.com"
+          className="h-12 min-w-0 flex-1 rounded-xl border border-white/15 bg-ink px-3 text-sm outline-none"
+        />
+        <button type="submit" disabled={busy || !email.trim()} className="h-12 rounded-xl bg-[#e5484d] px-5 text-sm font-extrabold text-white disabled:opacity-60">
+          BLOCK
+        </button>
+        <button
+          type="button"
+          disabled={busy || !email.trim()}
+          onClick={() => void submit(email, false)}
+          className="h-12 rounded-xl border border-[#86d4a0] px-5 text-sm font-extrabold text-[#7ddea0] disabled:opacity-60"
+        >
+          UNBLOCK
+        </button>
+      </form>
+      {message ? <p className={"mt-3 text-sm font-semibold " + (message.ok ? "text-[#7ddea0]" : "text-[#ff7b80]")}>{message.text}</p> : null}
+      <h3 className="mt-6 text-sm font-extrabold tracking-[0.14em] text-[#9aa3b2]">BLOCKED ({blocked.length})</h3>
+      {blocked.length === 0 ? (
+        <p className="mt-2 text-sm text-[#6b7280]">Nobody is blocked.</p>
+      ) : (
+        blocked.map((member) => (
+          <div key={member.id} className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/10 px-3 py-2">
+            <span className="min-w-0 truncate text-sm">{member.email}</span>
+            <button type="button" disabled={busy} onClick={() => void submit(member.email, false)} className="rounded-full border border-[#86d4a0] px-3 py-1 text-[10px] font-extrabold text-[#7ddea0] disabled:opacity-60">
+              UNBLOCK
+            </button>
+          </div>
+        ))
+      )}
     </section>
   );
 }

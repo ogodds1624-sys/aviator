@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
 
+// Owner's own account: payments stay visible in the admin list but are not counted in revenue.
+const OWNER_TEST_EMAILS = new Set(["betboro001@gmail.com"]);
+
 export type AdminMember = {
   id: string;
   name: string;
@@ -429,13 +432,15 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       memberName: row.member_name,
       memberEmail: row.member_email,
       hasReceipt: row.has_receipt === true || row.has_receipt === "t" || row.has_receipt === "true",
-      countsRevenue: !(row.counts_revenue === false || row.counts_revenue === "f" || row.counts_revenue === "false"),
+      countsRevenue:
+        !(row.counts_revenue === false || row.counts_revenue === "f" || row.counts_revenue === "false") &&
+        !OWNER_TEST_EMAILS.has((row.member_email ?? "").trim().toLowerCase()),
       confirmedAt: Number.isNaN(confirmed.getTime()) ? "" : confirmed.toISOString(),
       referredBy: row.referred_by,
       country: row.country === "Nigeria" ? "Nigeria" : row.country === "Ghana" ? "Ghana" : null,
     };
   });
-  const confirmedPayments = payments.filter((payment) => payment.status === "confirmed");
+  const confirmedPayments = payments.filter((payment) => payment.status === "confirmed" && payment.countsRevenue);
   const partnerRows = await sql<{
     id: string;
     name: string;

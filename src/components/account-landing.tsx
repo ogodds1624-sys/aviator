@@ -218,14 +218,14 @@ export function AccountLanding({ mode }: { mode: Mode }) {
 
   if (isPending || (user && !user.isDevFallback && !stayOnRegister)) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-ink">
+      <main className="hero-glow flex min-h-dvh items-center justify-center bg-ink">
         <SignalLoading />
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
+    <main className="hero-glow flex min-h-dvh items-center justify-center bg-ink px-4 py-8">
       <section className="w-full max-w-md rounded-3xl border border-line bg-panel px-5 py-5 text-white">
         <Link
           to="/"

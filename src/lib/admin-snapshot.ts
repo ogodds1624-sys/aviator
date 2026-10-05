@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
 
-// Payments from this account are confirmed automatically and kept out of admin views.
-const AUTO_CONFIRM_EMAIL = "betboro001@gmail.com";
-
 export type AdminMember = {
   id: string;
   name: string;
@@ -372,12 +369,10 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   const rows = await sql<{ id: string; name: string; email: string; createdAt: string | Date }>`
     select user_id as id, name, email, registered_at as "createdAt"
     from registered_users
-    where lower(email) <> ${AUTO_CONFIRM_EMAIL}
     order by registered_at desc
   `;
   const referralRows = await sql<{ user_id: string; referred_by: string }>`
     select user_id, referred_by from referrals
-    where user_id not in (select user_id from registered_users where lower(email) = ${AUTO_CONFIRM_EMAIL})
   `;
   const paidRows = await sql<{ user_id: string | null }>`
     select user_id from payments where status = 'confirmed' and user_id is not null
@@ -419,7 +414,6 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     left join "user" u on u.id = p.user_id
     left join referrals r on r.user_id = p.user_id
     left join player_country c on c.user_id = p.user_id
-    where coalesce(lower(u.email), '') <> ${AUTO_CONFIRM_EMAIL}
     order by p.created_at desc
   `;
   const payments: AdminPayment[] = paymentRows.map((row) => {
@@ -452,7 +446,6 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   }>`select id, name, email, code, status, commission from partners order by created_at desc`;
   const referralCounts = await sql<{ referred_by: string; total: number | string }>`
     select lower(referred_by) as referred_by, count(*) as total from referrals
-    where user_id not in (select user_id from registered_users where lower(email) = ${AUTO_CONFIRM_EMAIL})
     group by lower(referred_by)
   `;
   const referralRevenue = await sql<{ referred_by: string; ghs: number | string; ngn: number | string }>`
@@ -483,7 +476,6 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       limit 1
     ) partner on true
     where p.status = 'confirmed'
-      and coalesce(p.user_id, '') not in (select user_id from registered_users where lower(email) = ${AUTO_CONFIRM_EMAIL})
     group by lower(partner.code)
   `;
   const countBy = new Map(referralCounts.map((row) => [row.referred_by, Number(row.total)]));
@@ -737,13 +729,6 @@ export const recordPayment = createServerFn({ method: "POST" })
       `;
     }
     const id = crypto.randomUUID();
-    if (sessionUser?.email?.trim().toLowerCase() === AUTO_CONFIRM_EMAIL) {
-      await sql`
-        insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt, confirmed_at, counts_revenue)
-        values (${id}, ${data.name}, ${data.amount}, 'confirmed', ${sessionUser.id}, '', '', now(), false)
-      `;
-      return { ok: true, id };
-    }
     await sql`
       insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt)
       values (${id}, ${data.name}, ${data.amount}, 'pending', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt})
@@ -1277,7 +1262,6 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       select count(*) as total from referrals r
       join registered_users reg on reg.user_id = r.user_id
       where (lower(r.referred_by) = ${code} or lower(r.referred_by) = ${name})
-        and lower(reg.email) <> ${AUTO_CONFIRM_EMAIL}
     `;
     const payments = await sql<{ amount: number | string; created_at: string | Date; user_id: string; country: string | null }>`
       select p.amount, coalesce(p.confirmed_at, p.created_at) as created_at, p.user_id, c.country
@@ -1300,7 +1284,6 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       ) partner on true
       where p.status = 'confirmed'
         and lower(partner.code) = ${code}
-        and coalesce(p.user_id, '') not in (select user_id from registered_users where lower(email) = ${AUTO_CONFIRM_EMAIL})
     `;
     const cut = (amount: number) => commissionCut(amount, commission);
     const ghanaPayments = payments.filter((row) => !isNairaPayment(Number(row.amount), row.country));
@@ -1341,7 +1324,6 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       from referrals r
       join registered_users reg on reg.user_id = r.user_id
       where (lower(r.referred_by) = ${code} or lower(r.referred_by) = ${name})
-        and lower(reg.email) <> ${AUTO_CONFIRM_EMAIL}
       order by reg.registered_at desc
     `;
     const referrals = referred.map((row) => {

@@ -7,9 +7,9 @@ export function minutesFor(amount: number) {
   return 3;
 }
 
-export function startSession(amount: number) {
+export function startSession(amount: number, usedMs = 0) {
   const mins = minutesFor(amount);
-  const endsAt = Date.now() + mins * 60 * 1000;
+  const endsAt = Date.now() + mins * 60 * 1000 - usedMs;
   window.localStorage.setItem(KEY, JSON.stringify({ endsAt, mins }));
 }
 

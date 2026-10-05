@@ -90,7 +90,7 @@ function NigeriaPayPage() {
   useEffect(() => {
     if (!amount || held) return;
     if (result === "confirmed") {
-      startSession(amount);
+      startSession(amount, NETWORK_WAIT_MS);
       void navigate({ to: "/session" });
       return;
     }

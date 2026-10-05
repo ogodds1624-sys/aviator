@@ -121,7 +121,6 @@ export function AccountLanding({ mode }: { mode: Mode }) {
               name: trimmedName,
               email: trimmed,
               password,
-              rememberMe: true,
             });
             const created = !result.error || Boolean((result as unknown as { data?: { user?: unknown } }).data?.user);
             if (created) {

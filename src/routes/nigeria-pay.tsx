@@ -7,10 +7,10 @@ import { useLiveStorefront } from "@/lib/storefront-live";
 import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
+import { getNetworkWaitMs } from "@/lib/network-wait";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
-const NETWORK_WAIT_MS = 2 * 60 * 1000;
 
 export const Route = createFileRoute("/nigeria-pay")({
   component: NigeriaPayPage,
@@ -29,6 +29,7 @@ function naira(amount: number) {
 function NigeriaPayPage() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const NETWORK_WAIT_MS = getNetworkWaitMs(user?.primaryEmail);
   const userId = user?.id ?? "";
   const devFallback = user?.isDevFallback === true;
   const store = useLiveStorefront();

@@ -6,10 +6,10 @@ import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snap
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { startSession } from "@/lib/desk-session";
+import { getNetworkWaitMs } from "@/lib/network-wait";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
-const NETWORK_WAIT_MS = 2 * 60 * 1000;
 
 export const Route = createFileRoute("/pay")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/pay")({
 function PayPage() {
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const NETWORK_WAIT_MS = getNetworkWaitMs(user?.primaryEmail);
   const { amount } = Route.useSearch();
   const store = useLiveStorefront();
   const userId = user?.id ?? "";

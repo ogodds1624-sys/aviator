@@ -21,17 +21,17 @@ export const Route = createFileRoute("/packages")({
 
 const PACKAGES = [
   {
-    price: 300,
+    price: 355,
     detail: "3 mins per session",
     icon: Zap,
   },
   {
-    price: 400,
+    price: 455,
     detail: "5 mins per session",
     icon: Flame,
   },
   {
-    price: 500,
+    price: 555,
     detail: "7 mins per session",
     icon: Gem,
   },
@@ -48,6 +48,10 @@ function PackagesPage() {
   const [alertOn, setAlertOn] = useState(Boolean(rejected));
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      setReady(true);
+      return;
+    }
     if (isPending) return;
     let stop = false;
     void getSportyLink().then((link) => {
@@ -78,6 +82,7 @@ function PackagesPage() {
   }, [rejected]);
 
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     if (stay) return;
     if (sessionLeft() > 0) void navigate({ to: "/session", viewTransition: false });
   }, [navigate, stay]);

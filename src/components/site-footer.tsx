@@ -140,15 +140,12 @@ export const SiteFooter = memo(function SiteFooter() {
               SEND YOUR TESTIMONY
             </button>
           ) : (
-            <>
-              <Link
-                to="/register"
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-red px-4 text-xs font-extrabold tracking-wide text-white no-underline"
-              >
-                REGISTER TO SEND A TESTIMONY
-              </Link>
-              <p className="mt-2 text-xs text-[#8b95a7]">Only registered users can send a testimony.</p>
-            </>
+            <Link
+              to="/register"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-red px-4 text-xs font-extrabold tracking-wide text-white no-underline"
+            >
+              REGISTER TO SEND A TESTIMONY
+            </Link>
           )}
           {open && registered ? (
             <form onSubmit={(event) => void onSubmit(event)} className="mt-3 rounded-2xl border border-white/10 bg-[#111111] px-4 py-4">

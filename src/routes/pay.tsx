@@ -48,7 +48,7 @@ function PayPage() {
       .then((link) => {
         if (stop) return;
         if (!link.signedIn || devFallback) {
-          void navigate({ to: "/register", viewTransition: false });
+          void navigate({ to: "/register" });
           return;
         }
         if (!link.linked) {
@@ -56,7 +56,7 @@ function PayPage() {
           return;
         }
         if (link.country === "Nigeria") {
-          void navigate({ to: "/nigeria-pay", viewTransition: false });
+          void navigate({ to: "/nigeria-pay" });
           return;
         }
         setAllowed(true);
@@ -88,7 +88,7 @@ function PayPage() {
       return;
     }
     if (result === "rejected") {
-      void navigate({ to: "/packages", search: { rejected: 1 }, viewTransition: false });
+      void navigate({ to: "/packages", search: { rejected: 1 } });
     }
   }, [result, held, amount, navigate]);
 

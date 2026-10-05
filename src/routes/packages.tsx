@@ -65,7 +65,7 @@ function PackagesPage() {
         return;
       }
       if (link.country === "Nigeria") {
-        void navigate({ to: "/nigeria-pay", viewTransition: false });
+        void navigate({ to: "/nigeria-pay" });
         return;
       }
       setReady(true);
@@ -84,7 +84,7 @@ function PackagesPage() {
   useEffect(() => {
     if (import.meta.env.DEV) return;
     if (stay) return;
-    if (sessionLeft() > 0) void navigate({ to: "/session", viewTransition: false });
+    if (sessionLeft() > 0) void navigate({ to: "/session" });
   }, [navigate, stay]);
 
   if (!ready) {
@@ -148,7 +148,7 @@ function PackagesPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    void navigate({ to: "/pay", search: { amount: pack.price }, viewTransition: false })
+                    void navigate({ to: "/pay", search: { amount: pack.price } })
                   }
                   style={{ animationDelay: `${index * 0.2}s` }}
                   className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"

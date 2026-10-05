@@ -56,6 +56,10 @@ function NigeriaPayPage() {
   useEffect(() => {
     if (isPending) return;
     let stop = false;
+    if (import.meta.env.DEV) {
+      setReady(true);
+      return;
+    }
     void getSportyLink().then((link) => {
       if (stop) return;
       if (!link.signedIn || devFallback) {
@@ -67,7 +71,7 @@ function NigeriaPayPage() {
         return;
       }
       if (link.country !== "Nigeria") {
-        void navigate({ to: "/packages", viewTransition: false });
+        void navigate({ to: "/packages" });
         return;
       }
       setReady(true);

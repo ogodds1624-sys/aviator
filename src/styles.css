@@ -473,20 +473,22 @@
 @keyframes page-out {
   to {
     opacity: 0;
-    transform: translateY(-14px);
   }
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(8px);
   }
 }
 
-::view-transition-old(root),
+::view-transition-old(root) {
+  animation: page-out 260ms ease-out both;
+}
+
 ::view-transition-new(root) {
-  animation: none;
+  animation: page-in 520ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -811,8 +813,8 @@ body.site-front button:not(:disabled),
 body.site-front a,
 body.site-front [role="button"] {
   transition:
-    transform 340ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 340ms ease;
+    transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 420ms ease;
 }
 
 body.site-front button:not(:disabled):active,
@@ -821,7 +823,7 @@ body.site-front [role="button"]:active,
 body.site-front button.press-hold,
 body.site-front a.press-hold,
 body.site-front [role="button"].press-hold {
-  transition-duration: 200ms;
+  transition-duration: 260ms;
   opacity: 0.94;
   transform: translateY(1px) scale(0.988);
 }

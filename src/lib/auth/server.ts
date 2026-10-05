@@ -30,6 +30,7 @@
  * a verified id via `@/lib/auth/middleware`.
  */
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
@@ -233,6 +234,21 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 60,
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 300 },
+  },
+
+  // Admin-blocked accounts cannot start a new session.
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session: { userId: string }) => {
+          const { getSql } = await import("../db");
+          const { isUserBlocked, BLOCKED_MESSAGE } = await import("../blocked-users");
+          if (await isUserBlocked(await getSql(), session.userId)) {
+            throw new APIError("FORBIDDEN", { message: BLOCKED_MESSAGE });
+          }
+        },
+      },
+    },
   },
 
   // Local email/password — toggled only via `./email-password` (not a plugin).

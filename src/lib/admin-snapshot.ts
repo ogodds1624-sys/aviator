@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
+import { readBlockedIds, setUserBlocked } from "@/lib/blocked-users";
 
 // Owner's own account: payments stay visible in the admin list but are not counted in revenue.
 const OWNER_TEST_EMAILS = new Set(["betboro001@gmail.com"]);
@@ -11,6 +12,7 @@ export type AdminMember = {
   createdAt: string;
   paid: boolean;
   referredBy: string | null;
+  blocked: boolean;
 };
 
 export type AdminPayment = {
@@ -380,6 +382,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
   const paidRows = await sql<{ user_id: string | null }>`
     select user_id from payments where status = 'confirmed' and user_id is not null
   `;
+  const blockedIds = await readBlockedIds(sql);
   const referredBy = new Map(referralRows.map((row) => [row.user_id, row.referred_by]));
   const paidIds = new Set(paidRows.map((row) => row.user_id).filter((id): id is string => Boolean(id)));
   const members: AdminMember[] = rows.map((row) => {
@@ -391,6 +394,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       createdAt: Number.isNaN(created.getTime()) ? "" : created.toISOString(),
       paid: paidIds.has(row.id),
       referredBy: referredBy.get(row.id) ?? null,
+      blocked: blockedIds.has(row.id),
     };
   });
   const paymentRows = await sql<{
@@ -627,6 +631,19 @@ export const deleteTestimony = createServerFn({ method: "POST" })
     const sql = await getSql();
     await ensurePayments(sql);
     await sql`delete from testimonies where id = ${data.id}`;
+    return readSnapshot(sql);
+  });
+
+export const setMemberBlocked = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string; blocked: boolean }) => {
+    if (!data?.id) throw new Error("Missing member.");
+    return { id: data.id, blocked: Boolean(data.blocked) };
+  })
+  .handler(async ({ data }) => {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    await ensurePayments(sql);
+    await setUserBlocked(sql, data.id, data.blocked);
     return readSnapshot(sql);
   });
 

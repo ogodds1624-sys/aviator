@@ -18,6 +18,7 @@ import {
   saveGatewayRates,
   setPartnerCommission,
   setPartnerLock,
+  setMemberBlocked,
   setTestimonyStatus,
   type AdminSnapshot,
   type AdminTestimony,
@@ -131,7 +132,7 @@ const EMPTY_SNAPSHOT: AdminSnapshot = {
   },
 };
 
-const memberCols = "member-row desk-row grid-cols-[minmax(0,1.4fr)_5.5rem_7.5rem_9rem]";
+const memberCols = "member-row desk-row grid-cols-[minmax(0,1.4fr)_5.5rem_7.5rem_9rem_6.5rem]";
 const txCols = "tx-row desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_8.5rem_7.5rem]";
 
 function AdminPage() {
@@ -253,6 +254,15 @@ function AdminPage() {
     setSpinning(true);
     try {
       setSnapshot(await rejectPayment({ data: { id } }));
+    } finally {
+      setSpinning(false);
+    }
+  }
+
+  async function toggleBlocked(id: string, blocked: boolean) {
+    setSpinning(true);
+    try {
+      setSnapshot(await setMemberBlocked({ data: { id, blocked } }));
     } finally {
       setSpinning(false);
     }
@@ -456,7 +466,7 @@ function AdminPage() {
             <TransactionHistory payments={view.payments} busy={spinning} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} />
           ) : tab === "members" ? (
             <div className="mt-8">
-              <MemberList members={view.members} />
+              <MemberList members={view.members} busy={spinning} onToggleBlock={(id, blocked) => void toggleBlocked(id, blocked)} />
             </div>
           ) : tab === "partners" ? (
             <PartnerDesk partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
@@ -1076,7 +1086,15 @@ function TransactionHistory({
   );
 }
 
-function MemberList({ members }: { members: AdminSnapshot["members"] }) {
+function MemberList({
+  members,
+  busy,
+  onToggleBlock,
+}: {
+  members: AdminSnapshot["members"];
+  busy: boolean;
+  onToggleBlock: (id: string, blocked: boolean) => void;
+}) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const shown = needle
@@ -1095,12 +1113,13 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
         />
       </div>
       <div className="overflow-x-auto">
-        <div className="min-w-[40rem]">
+        <div className="min-w-[46rem]">
           <div className={memberCols + " desk-head text-[11px] tracking-[0.14em]"}>
             <span>MEMBER</span>
             <span className="text-center">JOINED</span>
             <span className="text-center">STATUS</span>
             <span className="text-center">REFERRED BY</span>
+            <span className="text-center">LOGIN</span>
           </div>
           {shown.length === 0 ? (
             <p className="px-4 py-5 text-sm text-[#6b7280]">{members.length === 0 ? "No accounts yet." : "No members match that search."}</p>
@@ -1118,7 +1137,13 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
                     <p>{date ? `${date.getFullYear()} ·` : ""}</p>
                     <p>{date ? date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
                   </div>
-                  {member.paid ? <span className="pill-active justify-self-center">ACTIVE</span> : <span className="pill-unpaid justify-self-center">UNPAID</span>}
+                  {member.blocked ? (
+                    <span className="pill-unpaid justify-self-center">BLOCKED</span>
+                  ) : member.paid ? (
+                    <span className="pill-active justify-self-center">ACTIVE</span>
+                  ) : (
+                    <span className="pill-unpaid justify-self-center">UNPAID</span>
+                  )}
                   <div className="flex justify-center">
                     {member.referredBy ? (
                       <span className="max-w-full truncate rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-bold">{member.referredBy}</span>
@@ -1126,6 +1151,17 @@ function MemberList({ members }: { members: AdminSnapshot["members"] }) {
                       <span className="text-xs text-[#9aa3b2]">—</span>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onToggleBlock(member.id, !member.blocked)}
+                    className={
+                      "justify-self-center rounded-full border px-3 py-1 text-[10px] font-extrabold disabled:opacity-60 " +
+                      (member.blocked ? "border-[#86d4a0] text-[#7ddea0]" : "border-[#e5484d] text-[#ff7b80]")
+                    }
+                  >
+                    {member.blocked ? "UNBLOCK" : "BLOCK"}
+                  </button>
                 </article>
               );
             })

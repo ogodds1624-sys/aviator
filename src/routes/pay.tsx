@@ -9,10 +9,12 @@ import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
+const NETWORK_WAIT_MS = 2 * 60 * 1000;
+
 export const Route = createFileRoute("/pay")({
   validateSearch: (search: Record<string, unknown>) => {
     const amount = Number(search.amount);
-    return { amount: amount === 400 || amount === 500 ? amount : 300 };
+    return { amount: [400, 500, 455, 555, 355].includes(amount) ? amount : 355 };
   },
   component: PayPage,
 });
@@ -31,7 +33,14 @@ function PayPage() {
   const [error, setError] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
+  const [held, setHeld] = useState(false);
 
+  useEffect(() => {
+    if (!paymentId) return;
+    setHeld(true);
+    const timer = window.setTimeout(() => setHeld(false), NETWORK_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [paymentId]);
   useEffect(() => {
     if (isPending) return;
     let stop = false;
@@ -72,6 +81,7 @@ function PayPage() {
   }, [paymentId, result]);
 
   useEffect(() => {
+    if (held) return;
     if (result === "confirmed") {
       startSession(amount);
       void navigate({ to: "/session" });
@@ -80,7 +90,7 @@ function PayPage() {
     if (result === "rejected") {
       void navigate({ to: "/packages", search: { rejected: 1 }, viewTransition: false });
     }
-  }, [result, amount, navigate]);
+  }, [result, held, amount, navigate]);
 
   const options = [
     ...(store?.wallets ?? []).map((wallet) => ({
@@ -141,12 +151,18 @@ function PayPage() {
     }
   }
 
-  const waitingLabel =
-    result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
+  const waitingLabel = held
+    ? "network problem"
+    : result === "confirmed"
+      ? "payment confirmed"
+      : result === "rejected"
+        ? "payment rejected"
+        : "waiting for confirmation";
+  const waitingNote = held ? "We're having trouble reaching the network. Please keep this page open." : undefined;
 
   return (
     <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">
-      {result === "rejected" ? (
+      {result === "rejected" && !held ? (
         <div className="reject-alert fixed inset-0 z-50 grid place-items-center bg-black/80 px-6" role="alert">
           <div className="reject-card w-full max-w-sm rounded-3xl border border-red bg-[#140606] px-5 py-7 text-center">
             <p className="text-xs font-extrabold tracking-[0.2em] text-red">PAYMENT REJECTED</p>
@@ -155,7 +171,7 @@ function PayPage() {
           </div>
         </div>
       ) : paymentId ? (
-        <SignalLoading label={waitingLabel} />
+        <SignalLoading label={waitingLabel} note={waitingNote} />
       ) : null}
       <section className="w-full max-w-md rounded-[28px] border border-line bg-panel px-5 py-5">
         <div className="flex items-start justify-between gap-3">

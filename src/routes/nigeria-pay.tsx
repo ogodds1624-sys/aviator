@@ -10,6 +10,8 @@ import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
+const NETWORK_WAIT_MS = 2 * 60 * 1000;
+
 export const Route = createFileRoute("/nigeria-pay")({
   component: NigeriaPayPage,
 });
@@ -43,7 +45,14 @@ function NigeriaPayPage() {
   const [waiting, setWaiting] = useState(false);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
+  const [held, setHeld] = useState(false);
 
+  useEffect(() => {
+    if (!paymentId) return;
+    setHeld(true);
+    const timer = window.setTimeout(() => setHeld(false), NETWORK_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [paymentId]);
   useEffect(() => {
     if (isPending) return;
     let stop = false;
@@ -79,7 +88,7 @@ function NigeriaPayPage() {
   }, [paymentId, result]);
 
   useEffect(() => {
-    if (!amount) return;
+    if (!amount || held) return;
     if (result === "confirmed") {
       startSession(amount);
       void navigate({ to: "/session" });
@@ -93,7 +102,7 @@ function NigeriaPayPage() {
       setAmount(null);
       setAlertOn(true);
     }
-  }, [result, amount, navigate]);
+  }, [result, held, amount, navigate]);
 
   const accounts = store?.nigeriaAccounts ?? [];
   const selected = accounts[choice] ?? accounts[0];
@@ -159,8 +168,14 @@ function NigeriaPayPage() {
     }
   }
 
-  const waitingLabel =
-    result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
+  const waitingLabel = held
+    ? "network problem"
+    : result === "confirmed"
+      ? "payment confirmed"
+      : result === "rejected"
+        ? "payment rejected"
+        : "waiting for confirmation";
+  const waitingNote = held ? "We're having trouble reaching the network. Please keep this page open." : undefined;
 
   if (!ready) {
     return (
@@ -236,7 +251,7 @@ function NigeriaPayPage() {
 
   return (
     <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">
-      {result === "rejected" ? (
+      {result === "rejected" && !held ? (
         <div className="reject-alert fixed inset-0 z-50 grid place-items-center bg-black/80 px-6" role="alert">
           <div className="reject-card w-full max-w-sm rounded-3xl border border-red bg-[#140606] px-5 py-7 text-center">
             <p className="text-xs font-extrabold tracking-[0.2em] text-red">PAYMENT REJECTED</p>
@@ -245,7 +260,7 @@ function NigeriaPayPage() {
           </div>
         </div>
       ) : paymentId ? (
-        <SignalLoading label={waitingLabel} />
+        <SignalLoading label={waitingLabel} note={waitingNote} />
       ) : null}
       <section className="w-full max-w-md rounded-[28px] border border-line bg-panel px-5 py-5">
         <div className="flex items-start justify-between gap-3">

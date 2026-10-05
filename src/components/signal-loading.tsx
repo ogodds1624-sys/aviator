@@ -1,6 +1,6 @@
 import { Plane } from "lucide-react";
 
-export function SignalLoading({ label = "Loading" }: { label?: string }) {
+export function SignalLoading({ label = "Loading", note }: { label?: string; note?: string }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 px-6" role="status">
       <div className="grid justify-items-center gap-5">
@@ -13,7 +13,8 @@ export function SignalLoading({ label = "Loading" }: { label?: string }) {
           <span className="size-3 rounded-full bg-gold" />
         </div>
         <p className="text-center text-sm font-extrabold tracking-[0.2em] text-gold uppercase">{label}</p>
-      </div>
+                {note ? <p className="max-w-xs text-center text-sm text-white/70">{note}</p> : null}
+              </div>
     </div>
   );
 }

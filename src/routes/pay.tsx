@@ -29,6 +29,8 @@ function PayPage() {
   const [allowed, setAllowed] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
+  const [receipt, setReceipt] = useState("");
+  const [receiptName, setReceiptName] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -134,6 +136,36 @@ function PayPage() {
     });
   }
 
+  function onReceipt(file: File | undefined) {
+    if (!file) {
+      setReceipt("");
+      setReceiptName("");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setReceipt("");
+      setReceiptName("");
+      setError("Choose an image screenshot of your payment receipt.");
+      return;
+    }
+    setReceipt("");
+    setReceiptName("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        setError("Could not read that screenshot. Please choose it again.");
+        return;
+      }
+      setReceipt(reader.result);
+      setReceiptName(file.name);
+      setError(null);
+    };
+    reader.onerror = () => {
+      setError("Could not read that screenshot. Please choose it again.");
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const payer = name.trim();
@@ -141,10 +173,14 @@ function PayPage() {
       setError("Enter the name on the account you sent from.");
       return;
     }
+    if (!receipt) {
+      setError("Attach a screenshot of your payment receipt.");
+      return;
+    }
     setError(null);
     try {
       await rememberReferral();
-      const saved = await recordPayment({ data: { name: payer, amount, referredBy: storedReferral() } });
+      const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
@@ -252,12 +288,24 @@ function PayPage() {
                 1. Send <strong className="text-[#3dde6a]">GHS {amount}</strong> to the{" "}
                 <strong>{selected.label}</strong> details above.
               </li>
-              <li>2. Enter the name on the account you sent from.</li>
+              <li>2. Attach a screenshot of the payment receipt and enter the name on the account you sent from.</li>
               <li>3. An admin confirms it under Transactions. This page updates when they do.</li>
             </ol>
 
             {paymentId ? null : (
               <form onSubmit={onSubmit} className="mt-6">
+                <label htmlFor="receipt" className="text-xs font-extrabold tracking-[0.14em] text-white">
+                  RECEIPT SCREENSHOT
+                </label>
+                <input
+                  id="receipt"
+                  type="file"
+                  accept="image/*"
+                  required
+                  onChange={(event) => onReceipt(event.target.files?.[0])}
+                  className="mt-3 w-full rounded-xl border border-line bg-ink px-3 py-3 text-sm text-white file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white"
+                />
+                <p className="mt-2 text-sm text-white/60">{receiptName || "no screenshot selected"}</p>
                 <label htmlFor="momo-name" className="text-xs font-extrabold tracking-[0.14em] text-white">
                   NAME ON THE ACCOUNT YOU SENT FROM
                 </label>

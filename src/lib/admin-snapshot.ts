@@ -619,6 +619,7 @@ export const setTestimonyStatus = createServerFn({ method: "POST" })
     return readSnapshot(sql);
   });
 
+
 export const deleteTestimony = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => {
     if (!data?.id) throw new Error("Missing testimony.");
@@ -706,7 +707,8 @@ export const recordPayment = createServerFn({ method: "POST" })
     const amount = Number(data?.amount);
     const receipt = typeof data?.receipt === "string" ? data.receipt : "";
     const referredBy = String(data?.referredBy ?? "").trim().slice(0, 80);
-    if (name.length < 3) throw new Error("Enter the name on the MoMo number.");
+    if (name.length < 3) throw new Error("Enter the name on the account you sent from.");
+    if (!/^data:image\/[^;,]+;base64,/.test(receipt)) throw new Error("Attach an image screenshot of your payment receipt.");
     if (![300, 400, 500, 355, 455, 555, 50000, 75000, 85000].includes(amount)) throw new Error("Unknown package.");
     return { name, amount, receipt, referredBy };
   })
@@ -1517,4 +1519,3 @@ export const saveGatewayCheckout = createServerFn({ method: "POST" })
     await sql`update gateway_settings set checkout = ${JSON.stringify(data)} where id = 'main'`;
     return readSnapshot(sql);
   });
-

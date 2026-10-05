@@ -144,11 +144,26 @@ function NigeriaPayPage() {
       setReceiptName("");
       return;
     }
+    if (!file.type.startsWith("image/")) {
+      setReceipt("");
+      setReceiptName("");
+      setError("Choose an image screenshot of your payment receipt.");
+      return;
+    }
+    setReceipt("");
+    setReceiptName("");
     const reader = new FileReader();
     reader.onload = () => {
-      setReceipt(typeof reader.result === "string" ? reader.result : "");
+      if (typeof reader.result !== "string") {
+        setError("Could not read that screenshot. Please choose it again.");
+        return;
+      }
+      setReceipt(reader.result);
       setReceiptName(file.name);
       setError(null);
+    };
+    reader.onerror = () => {
+      setError("Could not read that screenshot. Please choose it again.");
     };
     reader.readAsDataURL(file);
   }
@@ -159,6 +174,10 @@ function NigeriaPayPage() {
     const payer = name.trim();
     if (payer.length < 3) {
       setError("Enter the name on the account you sent from.");
+      return;
+    }
+    if (!receipt) {
+      setError("Attach a screenshot of your payment receipt.");
       return;
     }
     setError(null);
@@ -340,7 +359,7 @@ function NigeriaPayPage() {
                 1. Transfer <strong>{naira(amount)} NGN</strong> to the account above from your banking app.
               </li>
               <li>
-                2. Attach a <strong>screenshot of the receipt</strong> — your Aviator Hack signal is opened once the payment is
+                2. Attach an <strong>image screenshot of the receipt</strong> — your Aviator Hack signal is opened once the payment is
                 confirmed.
               </li>
             </ol>
@@ -351,12 +370,13 @@ function NigeriaPayPage() {
               <input
                 id="receipt"
                 type="file"
-                accept="image/*,.pdf,.jpg,.jpeg,.png,.webp"
+                accept="image/*"
+                required
                 onChange={(event) => onReceipt(event.target.files?.[0])}
                 className="mt-3 w-full rounded-xl border border-line bg-ink px-3 py-3 text-sm text-white file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white"
               />
               <p className="mt-2 text-sm text-white/60">{receiptName || "no file selected"}</p>
-              <p className="mt-1 text-xs text-white/50">Any screenshot size is accepted, including files over 1MB.</p>
+              <p className="mt-1 text-xs text-white/50">Upload an image of your transfer receipt.</p>
               <label htmlFor="sender-name" className="mt-5 block text-xs font-extrabold tracking-[0.14em] text-white">
                 NAME ON THE TRANSFER
               </label>
@@ -382,4 +402,3 @@ function NigeriaPayPage() {
     </main>
   );
 }
-

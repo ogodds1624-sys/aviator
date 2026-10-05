@@ -134,7 +134,7 @@ function PartnersPage() {
 
   if (!portal) {
     return (
-      <main className="admin-desk flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
+      <main className="admin-desk hero-glow flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
         <section className="menu-pop w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#111111] text-white">
           <div className="px-6 pt-8 text-center">
             <Diamond className="mx-auto size-7 fill-red text-red" aria-hidden />

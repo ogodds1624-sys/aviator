@@ -403,6 +403,10 @@
   background: radial-gradient(ellipse at 20% 30%, rgba(226, 59, 59, 0.42), transparent 58%);
 }
 
+.hero-glow-fixed {
+  background: radial-gradient(ellipse at 20% 30%, rgba(226, 59, 59, 0.42), transparent 58%) fixed;
+}
+
 @keyframes signal-spin {
   to {
     transform: rotate(360deg);

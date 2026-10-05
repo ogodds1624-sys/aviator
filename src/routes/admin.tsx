@@ -336,8 +336,8 @@ function AdminPage() {
   }
 
   return (
-    <main className="admin-desk desk-shell bg-ink text-white">
-      <aside className="admin-side border-r border-white/10 bg-ink px-4 py-6 text-white">
+    <main className="admin-desk desk-shell hero-glow-fixed bg-ink text-white">
+      <aside className="admin-side border-r border-white/10 bg-black/40 px-4 py-6 text-white">
         <div className="flex items-start justify-between gap-2 px-2">
           <div className="flex items-start gap-2">
             <Diamond className="mt-1 size-4 shrink-0 fill-red text-red" aria-hidden />
@@ -375,7 +375,7 @@ function AdminPage() {
         </nav>
       </aside>
       <section className="min-w-0 flex-1">
-        <header className="admin-mobile-nav border-b border-white/10 bg-ink">
+        <header className="admin-mobile-nav border-b border-white/10 bg-black/40">
           <div className="flex items-center gap-3 px-4 py-3">
             <Diamond className="size-4 shrink-0 fill-red text-red" aria-hidden />
             <span className="truncate text-lg font-black tracking-tight">Aviator Hack</span>

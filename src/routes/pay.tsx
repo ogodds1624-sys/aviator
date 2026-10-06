@@ -29,7 +29,6 @@ function PayPage() {
   const devFallback = user?.isDevFallback === true;
   const [allowed, setAllowed] = useState(false);
   const [choice, setChoice] = useState(0);
-  const [name, setName] = useState("");
   const [receipt, setReceipt] = useState("");
   const [receiptName, setReceiptName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -169,11 +168,6 @@ function PayPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const payer = name.trim();
-    if (payer.length < 3) {
-      setError("Enter the name on the account you sent from.");
-      return;
-    }
     if (!receipt) {
       setError("Attach a screenshot of your payment receipt.");
       return;
@@ -181,7 +175,7 @@ function PayPage() {
     setError(null);
     try {
       await rememberReferral();
-      const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
+      const saved = await recordPayment({ data: { amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
@@ -289,7 +283,7 @@ function PayPage() {
                 1. Send <strong className="text-[#3dde6a]">GHS {amount}</strong> to the{" "}
                 <strong>{selected.label}</strong> details above.
               </li>
-              <li>2. Attach a screenshot of the payment receipt and enter the name on the account you sent from.</li>
+              <li>2. Attach a screenshot of the payment receipt.</li>
               <li>3. An admin confirms it under Transactions. This page updates when they do.</li>
             </ol>
 
@@ -307,17 +301,6 @@ function PayPage() {
                   className="mt-3 w-full rounded-xl border border-line bg-ink px-3 py-3 text-sm text-white file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white"
                 />
                 <p className="mt-2 text-sm text-white/60">{receiptName || "no screenshot selected"}</p>
-                <label htmlFor="momo-name" className="text-xs font-extrabold tracking-[0.14em] text-white">
-                  NAME ON THE ACCOUNT YOU SENT FROM
-                </label>
-                <input
-                  id="momo-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Kwame Mensah"
-                  autoComplete="name"
-                  className="mt-3 h-14 w-full rounded-xl border border-line bg-ink px-4 text-base text-white outline-none placeholder:text-white/40"
-                />
                 {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
                 <button
                   type="submit"

@@ -749,12 +749,12 @@ export const hasPaidAccess = createServerFn({ method: "GET" }).handler(async () 
 });
 
 export const recordPayment = createServerFn({ method: "POST" })
-  .inputValidator((data: { name: string; amount: number; receipt?: string; referredBy?: string }) => {
+  .inputValidator((data: { name?: string; amount: number; receipt?: string; referredBy?: string }) => {
     const name = data?.name?.trim() ?? "";
     const amount = Number(data?.amount);
     const receipt = typeof data?.receipt === "string" ? data.receipt : "";
     const referredBy = String(data?.referredBy ?? "").trim().slice(0, 80);
-    if (name.length < 3) throw new Error("Enter the name on the account you sent from.");
+    if (name && name.length < 3) throw new Error("Enter the name on the account you sent from.");
     if (!/^data:image\/[^;,]+;base64,/.test(receipt)) throw new Error("Attach an image screenshot of your payment receipt.");
     if (![300, 400, 500, 355, 455, 555, 50000, 75000, 85000].includes(amount)) throw new Error("Unknown package.");
     return { name, amount, receipt, referredBy };
@@ -784,9 +784,10 @@ export const recordPayment = createServerFn({ method: "POST" })
       `;
     }
     const id = crypto.randomUUID();
+    const payerName = data.name || "Receipt proof";
     await sql`
       insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt)
-      values (${id}, ${data.name}, ${data.amount}, 'pending', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt})
+      values (${id}, ${payerName}, ${data.amount}, 'pending', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt})
     `;
     return { ok: true, id };
   });

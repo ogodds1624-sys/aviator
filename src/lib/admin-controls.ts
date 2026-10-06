@@ -2,13 +2,20 @@ import type { Sql } from "@/lib/db";
 
 export const BLOCKED_MESSAGE = "This account has been blocked. Contact support.";
 
+let blockedReady: Promise<unknown> | null = null;
+let resetReady: Promise<unknown> | null = null;
+
 export async function ensureBlockedUsers(sql: Sql) {
-  await sql`
+  blockedReady ??= sql`
     create table if not exists blocked_users (
       user_id text primary key,
       blocked_at timestamptz not null default now()
     )
-  `;
+  `.catch((error) => {
+    blockedReady = null;
+    throw error;
+  });
+  await blockedReady;
 }
 
 export async function isUserBlocked(sql: Sql, userId: string) {
@@ -44,7 +51,11 @@ export async function readBlockedIds(sql: Sql) {
 }
 
 export async function ensureRevenueReset(sql: Sql) {
-  await sql`create table if not exists revenue_reset (id text primary key, reset_at timestamptz not null)`;
+  resetReady ??= sql`create table if not exists revenue_reset (id text primary key, reset_at timestamptz not null)`.catch((error) => {
+    resetReady = null;
+    throw error;
+  });
+  await resetReady;
 }
 
 export async function readRevenueResetAt(sql: Sql): Promise<string | null> {

@@ -95,12 +95,29 @@ function NigeriaPayPage() {
 
   useEffect(() => {
     if (!paymentId || result !== "pending") return;
-    const timer = window.setInterval(() => {
-      void getPaymentStatus({ data: { id: paymentId } }).then((row) => {
-        if (row.status === "confirmed" || row.status === "rejected") setResult(row.status);
-      });
-    }, 3000);
-    return () => window.clearInterval(timer);
+    let busy = false;
+    const check = () => {
+      if (busy) return;
+      busy = true;
+      void getPaymentStatus({ data: { id: paymentId } })
+        .then((row) => {
+          if (row.status === "confirmed" || row.status === "rejected") setResult(row.status);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          busy = false;
+        });
+    };
+    check();
+    const timer = window.setInterval(check, 1500);
+    const onVisible = () => {
+      if (!document.hidden) check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [paymentId, result]);
 
   useEffect(() => {

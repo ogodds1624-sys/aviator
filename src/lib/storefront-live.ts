@@ -34,19 +34,26 @@ export function useLiveStorefront() {
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       load();
-    }, phone ? 12000 : 3000);
+    }, phone ? 5000 : 3000);
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
     const onStorage = (event: StorageEvent) => {
       if (event.key === KEY) load();
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("aviator-gateway", load);
     window.addEventListener("focus", load);
+    window.addEventListener("online", load);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       live = false;
       window.clearInterval(timer);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("aviator-gateway", load);
       window.removeEventListener("focus", load);
+      window.removeEventListener("online", load);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 

@@ -180,7 +180,10 @@ function AdminPage() {
   useEffect(() => {
     if (!unlocked) return;
     let live = true;
+    let busy = false;
     const load = () => {
+      if (busy) return;
+      busy = true;
       void getAdminSnapshot()
         .then((data) => {
           if (!live) return;
@@ -211,15 +214,25 @@ function AdminPage() {
           knownPartners.current = new Set(data.partners.map((partner) => partner.id));
           setSnapshot(data);
         })
-        .catch(() => {
-          if (!live) return;
+        .catch(() => undefined)
+        .finally(() => {
+          busy = false;
         });
     };
     load();
     const id = window.setInterval(load, 3000);
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", load);
+    window.addEventListener("online", load);
     return () => {
       live = false;
       window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", load);
+      window.removeEventListener("online", load);
     };
   }, [unlocked]);
 

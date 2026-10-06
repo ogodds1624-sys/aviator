@@ -36,19 +36,19 @@ function PayPage() {
   const [error, setError] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
-  const [held, setHeld] = useState(false);
+  const [delayDone, setDelayDone] = useState(false);
   const sending = useRef(false);
 
   useEffect(() => {
     const pending = loadPendingPayment();
     if (pending && pending.amount === amount) setPaymentId(pending.id);
   }, [amount]);
+  const held = result === "confirmed" && !delayDone;
   useEffect(() => {
-    if (!paymentId) return;
-    setHeld(true);
-    const timer = window.setTimeout(() => setHeld(false), NETWORK_WAIT_MS);
+    if (result !== "confirmed") return;
+    const timer = window.setTimeout(() => setDelayDone(true), NETWORK_WAIT_MS);
     return () => window.clearTimeout(timer);
-  }, [paymentId]);
+  }, [result]);
   useEffect(() => {
     if (isPending) return;
     let stop = false;
@@ -199,7 +199,7 @@ function PayPage() {
       ? "payment confirmed"
       : result === "rejected"
         ? "payment rejected"
-        : "waiting for confirmation";
+        : "waiting for admin approval";
   const waitingNote = held ? "We're having trouble reaching the network. Please keep this page open." : undefined;
 
   return (

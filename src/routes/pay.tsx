@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
@@ -37,6 +37,7 @@ function PayPage() {
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
   const [held, setHeld] = useState(false);
+  const sending = useRef(false);
 
   useEffect(() => {
     const pending = loadPendingPayment();
@@ -174,11 +175,13 @@ function PayPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (sending.current || paymentId) return;
     if (!receipt) {
       setError("Attach a screenshot of your payment receipt.");
       return;
     }
     setError(null);
+    sending.current = true;
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { amount, receipt, referredBy: storedReferral() } });
@@ -186,6 +189,7 @@ function PayPage() {
       setPaymentId(saved.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
+      sending.current = false;
     }
   }
 
@@ -311,7 +315,7 @@ function PayPage() {
                 {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
                 <button
                   type="submit"
-                  disabled={!allowed}
+                  disabled={!allowed || Boolean(paymentId)}
                   className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                 >
                   I'VE SENT THE MONEY

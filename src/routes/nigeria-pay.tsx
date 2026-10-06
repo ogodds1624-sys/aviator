@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Flame, Gem, X, Zap } from "lucide-react";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -48,6 +48,7 @@ function NigeriaPayPage() {
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
   const [held, setHeld] = useState(false);
+  const sending = useRef(false);
 
   useEffect(() => {
     const pending = loadPendingPayment();
@@ -181,6 +182,7 @@ function NigeriaPayPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (sending.current || paymentId) return;
     if (!open || amount == null) return;
     const payer = name.trim();
     if (payer.length < 3) {
@@ -192,6 +194,7 @@ function NigeriaPayPage() {
       return;
     }
     setError(null);
+    sending.current = true;
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
@@ -200,6 +203,7 @@ function NigeriaPayPage() {
       setWaiting(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
+      sending.current = false;
     }
   }
 
@@ -403,7 +407,8 @@ function NigeriaPayPage() {
               {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
               <button
                 type="submit"
-                className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white"
+                disabled={Boolean(paymentId)}
+                className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
               >
                 I'VE SENT THE MONEY
               </button>

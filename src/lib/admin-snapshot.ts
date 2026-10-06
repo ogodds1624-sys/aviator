@@ -783,6 +783,14 @@ export const recordPayment = createServerFn({ method: "POST" })
         on conflict (user_id) do nothing
       `;
     }
+    if (sessionUser) {
+      const open = await sql<{ id: string }>`
+        select id from payments
+        where user_id = ${sessionUser.id} and status = 'pending' and amount = ${data.amount}
+        order by created_at desc limit 1
+      `;
+      if (open[0]) return { ok: true, id: open[0].id };
+    }
     const id = crypto.randomUUID();
     const payerName = data.name || "Receipt proof";
     await sql`

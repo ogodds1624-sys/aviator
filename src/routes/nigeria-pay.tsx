@@ -8,6 +8,7 @@ import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
 import { getNetworkWaitMs } from "@/lib/network-wait";
+import { clearPendingPayment, loadPendingPayment, savePendingPayment } from "@/lib/pending-payment";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -48,6 +49,14 @@ function NigeriaPayPage() {
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
   const [held, setHeld] = useState(false);
 
+  useEffect(() => {
+    const pending = loadPendingPayment();
+    if (!pending || ![50000, 75000, 85000].includes(pending.amount)) return;
+    setAmount(pending.amount as 50000 | 75000 | 85000);
+    setShowPay(true);
+    setPaymentId(pending.id);
+    setWaiting(true);
+  }, []);
   useEffect(() => {
     if (!paymentId) return;
     setHeld(true);
@@ -94,6 +103,7 @@ function NigeriaPayPage() {
 
   useEffect(() => {
     if (!amount || held) return;
+    if (result !== "pending") clearPendingPayment();
     if (result === "confirmed") {
       startSession(amount, NETWORK_WAIT_MS);
       void navigate({ to: "/session" });
@@ -185,6 +195,7 @@ function NigeriaPayPage() {
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
+      savePendingPayment(saved.id, amount);
       setPaymentId(saved.id);
       setWaiting(true);
     } catch (err) {

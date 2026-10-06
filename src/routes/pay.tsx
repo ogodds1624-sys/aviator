@@ -7,6 +7,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { startSession } from "@/lib/desk-session";
 import { getNetworkWaitMs } from "@/lib/network-wait";
+import { clearPendingPayment, loadPendingPayment, savePendingPayment } from "@/lib/pending-payment";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -37,6 +38,10 @@ function PayPage() {
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
   const [held, setHeld] = useState(false);
 
+  useEffect(() => {
+    const pending = loadPendingPayment();
+    if (pending && pending.amount === amount) setPaymentId(pending.id);
+  }, [amount]);
   useEffect(() => {
     if (!paymentId) return;
     setHeld(true);
@@ -84,6 +89,7 @@ function PayPage() {
 
   useEffect(() => {
     if (held) return;
+    if (result !== "pending") clearPendingPayment();
     if (result === "confirmed") {
       startSession(amount, NETWORK_WAIT_MS);
       void navigate({ to: "/session" });
@@ -176,6 +182,7 @@ function PayPage() {
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { amount, receipt, referredBy: storedReferral() } });
+      savePendingPayment(saved.id, amount);
       setPaymentId(saved.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");

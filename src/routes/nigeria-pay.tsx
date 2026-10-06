@@ -49,6 +49,7 @@ function NigeriaPayPage() {
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
   const [delayDone, setDelayDone] = useState(false);
   const sending = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const pending = loadPendingPayment();
@@ -195,6 +196,7 @@ function NigeriaPayPage() {
     }
     setError(null);
     sending.current = true;
+    setSubmitting(true);
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
@@ -204,6 +206,7 @@ function NigeriaPayPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
       sending.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -298,7 +301,7 @@ function NigeriaPayPage() {
             <p className="mt-2 text-sm text-white/70">Sending you back to the packages page.</p>
           </div>
         </div>
-      ) : paymentId ? (
+      ) : paymentId || submitting ? (
         <SignalLoading label={waitingLabel} note={waitingNote} />
       ) : null}
       <section className="w-full max-w-md rounded-[28px] border border-line bg-panel px-5 py-5">
